@@ -43,6 +43,12 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-amqp</artifactId>
 </dependency>
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.34</version> <!-- supports Java 21 -->
+    <scope>provided</scope>
+</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
