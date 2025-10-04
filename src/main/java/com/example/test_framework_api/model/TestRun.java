@@ -6,6 +6,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Data;
 
+import java.time.LocalDateTime; // For backward compatibility example
+
 @Data
 @Entity
 public class TestRun {
@@ -17,4 +19,7 @@ public class TestRun {
     private String name;
     private String status;
     private String reportPath;
+
+    // For schema backward compatibility (optional fields)
+    private LocalDateTime createdAt; // New field, can be null
 }
