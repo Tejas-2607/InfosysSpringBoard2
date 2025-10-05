@@ -1,6 +1,8 @@
 package com.example.test_framework_api.worker;
 
+import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
+import com.example.test_framework_api.service.TestRunService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,15 +15,19 @@ public class WorkerListener {
     @Autowired
     private TestExecutor testExecutor;
 
+    @Autowired
+    private TestRunService testRunService;
+
     @RabbitListener(queues = QUEUE)
     public void receiveMessage(TestRunRequest request) {
-        // Process message
         System.out.println("Received test run request: " + request);
         try {
             testExecutor.executeTest(request);
-            // Acknowledge implicitly or manually if needed
+            // Update TestRun status
+            TestRun testRun = testRunService.getTestRunById(request.getTestId()).orElseThrow();
+            testRun.setStatus("COMPLETED");
+            testRunService.createTestRun(testRun); // Save update
         } catch (Exception e) {
-            // Error handling: Throw to trigger retry/DLQ
             throw new RuntimeException("Failed to process test run", e);
         }
     }
