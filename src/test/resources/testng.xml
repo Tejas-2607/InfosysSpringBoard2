@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
+<suite name="RegressionSuite" parallel="methods" thread-count="4">  <!-- Parallel (Team 2) -->
+  <test name="UnitTests">
+    <classes>
+      <class name="com.example.test_framework_api.tests.TestNGExample"/>
+    </classes>
+  </test>
+</suite>

@@ -49,4 +49,7 @@ public class TestRunService {
     public List<TestRun> getAllTestRuns() {
         return repository.findAll();
     }
+    public TestRun updateTestRun(TestRun testRun) {
+    return repository.save(testRun); // Reuse save for update
+}
 }

@@ -3,6 +3,7 @@ package com.example.test_framework_api.worker;
 import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.model.TestRunRequest;
 import com.example.test_framework_api.service.TestResultService;
+import io.github.bonigarcia.wdm.WebDriverManager; // Should resolve now
 import io.restassured.RestAssured;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
@@ -26,12 +27,14 @@ public class TestExecutor {
 
         long startTime = System.currentTimeMillis();
         try {
-            
+            // Example Unit Test (Pyramid base)
+            if (1 + 1 != 2) throw new RuntimeException("Unit test failed");
 
             // Example Integration/API Test (REST-Assured)
             RestAssured.get("https://jsonplaceholder.typicode.com/todos/1").then().statusCode(200);
 
             // Example UI Test (Selenium)
+            WebDriverManager.chromedriver().setup(); // Auto-configure ChromeDriver
             WebDriver driver = new ChromeDriver();
             try {
                 driver.get("https://www.google.com");
