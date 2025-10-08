@@ -23,21 +23,35 @@ public class WorkerListener {
     @RabbitListener(queues = QUEUE)
     public void receiveMessage(TestRunRequest request) {
         System.out.println("Received test run request: " + request);
+        
+        // Find the parent TestRun to update its status later
+        Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
+        if (optionalTestRun.isEmpty()) {
+            System.err.println("TestRun with ID " + request.getTestId() + " not found. Cannot execute test.");
+            return; // Exit if the parent run doesn't exist
+        }
+        TestRun testRun = optionalTestRun.get();
+
         try {
+            // Mark as IN_PROGRESS before executing
+            testRun.setStatus("IN_PROGRESS");
+            testRunService.updateTestRun(testRun);
+
+            // Execute the actual test logic
             testExecutor.executeTest(request);
-            // Update TestRun status if found (handle missing ID)
-            Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
-            if (optionalTestRun.isPresent()) {
-                TestRun testRun = optionalTestRun.get();
-                testRun.setStatus("COMPLETED");
-                testRunService.createTestRun(testRun); // Or add update method: testRunService.updateTestRun(testRun);
-            } else {
-                System.err.println("TestRun ID " + request.getTestId() + " not found; skipping update");
-            }
+            
+            // Mark as COMPLETED if successful
+            testRun.setStatus("COMPLETED");
+
         } catch (Exception e) {
-            System.err.println("Error processing message: " + e.getMessage());
-            // Do NOT throw - this breaks retry loop. For production, log and nack message.
-            // If retry needed, configure selective rethrow (e.g., only for transient errors).
+            System.err.println("Error processing message for TestRun ID " + request.getTestId() + ": " + e.getMessage());
+            // Mark as FAILED if an exception occurs during execution
+            testRun.setStatus("FAILED");
+        
+        } finally {
+            // **THE FIX**: Use the dedicated update method, NOT createTestRun
+            testRunService.updateTestRun(testRun);
+            System.out.println("Finished processing and updated status for TestRun ID: " + request.getTestId());
         }
     }
 }
