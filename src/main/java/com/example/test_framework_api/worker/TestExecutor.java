@@ -38,10 +38,7 @@ public class TestExecutor {
                 driver = new ChromeDriver(options);
             }
 
-            // Example Unit Test
-            if (1 + 1 != 2) {
-                throw new RuntimeException("Unit test (1+1) failed");
-            }
+            // Example Unit Test (removed unnecessary dead code)
 
             // Example Integration/API Test
             RestAssured.get("https://jsonplaceholder.typicode.com/todos/1").then().statusCode(200);
