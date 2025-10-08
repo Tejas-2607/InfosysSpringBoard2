@@ -3,21 +3,24 @@ package com.example.test_framework_api.worker;
 import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.model.TestRunRequest;
 import com.example.test_framework_api.service.TestResultService;
-import io.github.bonigarcia.wdm.WebDriverManager; // Should resolve now
+import io.github.bonigarcia.wdm.WebDriverManager;
 import io.restassured.RestAssured;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
+import jakarta.annotation.PreDestroy;
 
 @Component
 public class TestExecutor {
 
     @Autowired
     private TestResultService resultService;
+
+    private static WebDriver driver; // Reuse driver (singleton for simplicity)
 
     public void executeTest(TestRunRequest request) {
         System.out.println("Executing test for ID: " + request.getTestId());
@@ -27,21 +30,25 @@ public class TestExecutor {
 
         long startTime = System.currentTimeMillis();
         try {
-            // Example Unit Test (Pyramid base)
-            if (1 + 1 != 2) throw new RuntimeException("Unit test failed");
+            // Setup driver once if null (better way: reuse to avoid repeated open/close)
+            if (driver == null) {
+                WebDriverManager.chromedriver().setup();
+                ChromeOptions options = new ChromeOptions();
+                options.addArguments("--headless"); // Optional: Run without UI for production
+                driver = new ChromeDriver(options);
+            }
 
-            // Example Integration/API Test (REST-Assured)
+            // Example Unit Test
+            if (1 + 1 != 2) {
+                throw new RuntimeException("Unit test (1+1) failed");
+            }
+
+            // Example Integration/API Test
             RestAssured.get("https://jsonplaceholder.typicode.com/todos/1").then().statusCode(200);
 
-            // Example UI Test (Selenium)
-            WebDriverManager.chromedriver().setup(); // Auto-configure ChromeDriver
-            WebDriver driver = new ChromeDriver();
-            try {
-                driver.get("https://www.google.com");
-                driver.findElement(By.name("q")).sendKeys("Selenium test");
-            } finally {
-                driver.quit();
-            }
+            // Example UI Test (reuse driver)
+            driver.get("https://www.google.com");
+            driver.findElement(By.name("q")).sendKeys("Selenium test");
 
             result.setStatus("PASS");
         } catch (Exception e) {
@@ -51,6 +58,16 @@ public class TestExecutor {
         } finally {
             result.setDuration(System.currentTimeMillis() - startTime);
             resultService.saveTestResult(result);
+            // Don't quit driver here - reuse; quit on app shutdown if needed
+        }
+    }
+
+    // Add shutdown hook or @PreDestroy to quit driver on app stop
+    @PreDestroy
+    public void closeDriver() {
+        if (driver != null) {
+            driver.quit();
+            driver = null;
         }
     }
 }
