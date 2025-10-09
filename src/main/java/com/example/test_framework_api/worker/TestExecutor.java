@@ -20,7 +20,7 @@ public class TestExecutor {
     @Autowired
     private TestResultService resultService;
 
-    private static WebDriver driver; // Reuse driver (singleton for simplicity)
+    private static WebDriver driver; 
 
     public void executeTest(TestRunRequest request) {
         System.out.println("Executing test for ID: " + request.getTestId());
@@ -30,20 +30,20 @@ public class TestExecutor {
 
         long startTime = System.currentTimeMillis();
         try {
-            // Setup driver once if null (better way: reuse to avoid repeated open/close)
+            
             if (driver == null) {
                 WebDriverManager.chromedriver().setup();
                 ChromeOptions options = new ChromeOptions();
-                options.addArguments("--headless"); // Optional: Run without UI for production
+                options.addArguments("--headless"); 
                 driver = new ChromeDriver(options);
             }
 
-            // Example Unit Test (removed unnecessary dead code)
+            
 
-            // Example Integration/API Test
+            
             RestAssured.get("https://jsonplaceholder.typicode.com/todos/1").then().statusCode(200);
 
-            // Example UI Test (reuse driver)
+            
             driver.get("https://www.google.com");
             driver.findElement(By.name("q")).sendKeys("Selenium test");
 
@@ -55,11 +55,11 @@ public class TestExecutor {
         } finally {
             result.setDuration(System.currentTimeMillis() - startTime);
             resultService.saveTestResult(result);
-            // Don't quit driver here - reuse; quit on app shutdown if needed
+            
         }
     }
 
-    // Add shutdown hook or @PreDestroy to quit driver on app stop
+    
     @PreDestroy
     public void closeDriver() {
         if (driver != null) {
