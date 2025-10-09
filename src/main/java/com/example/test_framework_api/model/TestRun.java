@@ -7,6 +7,10 @@ import jakarta.persistence.Id;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 
 @Data
 @Entity
@@ -21,5 +25,7 @@ public class TestRun {
     private String reportPath;
 
     // For schema backward compatibility (optional fields)
-    private LocalDateTime createdAt = LocalDateTime.now(); // Set default to now
+    @JsonSerialize(using = LocalDateTimeSerializer.class) // Add this
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class) // Add this
+    private LocalDateTime createdAt; // New field, can be null
 }
