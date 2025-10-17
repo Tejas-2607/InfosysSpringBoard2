@@ -47,7 +47,7 @@ public class TestExecutor {
             driver.get("https://www.google.com");
             driver.findElement(By.name("q")).sendKeys("Selenium test");
 
-            result.setStatus("PASS");
+            result.setStatus("PASSED");
         } catch (Exception e) {
             result.setStatus("FAIL");
             result.setErrorMessage(e.getMessage());

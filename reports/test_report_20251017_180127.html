@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Test Execution Report</title>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+.timestamp {
+    font-size: 0.95em;
+    opacity: 0.9;
+    font-style: italic;
+}
+
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.summary-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.summary-card.passed {
+    border-left: 4px solid #28a745;
+}
+
+.summary-card.failed {
+    border-left: 4px solid #dc3545;
+}
+
+.summary-label {
+    font-size: 0.85em;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-value {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #333;
+}
+
+.results-section {
+    padding: 30px;
+}
+
+.results-section h2 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results-table thead {
+    background: #f8f9fa;
+}
+
+.results-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 0.95em;
+}
+
+.results-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+.results-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-passed {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.id-cell, .duration-cell, .date-cell {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.footer {
+    background: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+    color: #6c757d;
+    border-top: 1px solid #e0e0e0;
+    font-size: 0.9em;
+}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <header class='header'>
+            <h1>Test Execution Report</h1>
+            <p class='timestamp'>Generated on October 17, 2025 at 18:01:27</p>
+        </header>
+        <div class='summary'>
+            <div class='summary-card'>
+                <span class='summary-label'>Total Tests</span>
+                <span class='summary-value'>5</span>
+            </div>
+            <div class='summary-card passed'>
+                <span class='summary-label'>Passed</span>
+                <span class='summary-value'>5</span>
+            </div>
+            <div class='summary-card failed'>
+                <span class='summary-label'>Failed</span>
+                <span class='summary-value'>0</span>
+            </div>
+            <div class='summary-card'>
+                <span class='summary-label'>Total Duration</span>
+                <span class='summary-value'>23000ms</span>
+            </div>
+        </div>
+        <div class='results-section'>
+            <h2>Test Results</h2>
+            <table class='results-table'>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Test Name</th>
+                        <th>Status</th>
+                        <th>Duration (ms)</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class='id-cell'>1</td>
+                        <td>Temp2</td>
+                        <td><span class='status-badge status-passed'>PASS</span></td>
+                        <td class='duration-cell'>2258</td>
+                        <td class='date-cell'>2025-10-09T17:39:52</td>
+                    </tr>
+                    <tr>
+                        <td class='id-cell'>2</td>
+                        <td>Temp3</td>
+                        <td><span class='status-badge status-passed'>PASS</span></td>
+                        <td class='duration-cell'>6177</td>
+                        <td class='date-cell'>2025-10-09T17:43:13</td>
+                    </tr>
+                    <tr>
+                        <td class='id-cell'>3</td>
+                        <td>Temp4</td>
+                        <td><span class='status-badge status-passed'>PASS</span></td>
+                        <td class='duration-cell'>2300</td>
+                        <td class='date-cell'>2025-10-09T17:43:48</td>
+                    </tr>
+                    <tr>
+                        <td class='id-cell'>4</td>
+                        <td>Temp5</td>
+                        <td><span class='status-badge status-passed'>PASS</span></td>
+                        <td class='duration-cell'>10081</td>
+                        <td class='date-cell'>2025-10-09T19:16:26</td>
+                    </tr>
+                    <tr>
+                        <td class='id-cell'>5</td>
+                        <td>Temp6</td>
+                        <td><span class='status-badge status-passed'>PASS</span></td>
+                        <td class='duration-cell'>2184</td>
+                        <td class='date-cell'>2025-10-09T19:17:43</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <footer class='footer'>
+            <p>Report generated by Test Framework API</p>
+        </footer>
+    </div>
+</body>
+</html>
