@@ -3,11 +3,11 @@ package com.example.test_framework_api.service;
 import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
 import com.example.test_framework_api.repository.TestRunRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,36 +18,30 @@ public class TestRunService {
 
     @Autowired
     private TestRunRepository repository;
-    
+
     @Autowired
     private AmqpTemplate amqpTemplate;
 
-    
+    @Autowired
+    private ObjectMapper objectMapper; // For JSON serialization
+
     public TestRun createTestRun(TestRun testRun) {
-        
+        // Business logic: Set initial status, etc.
         testRun.setStatus("PENDING");
-        testRun.setCreatedAt(LocalDateTime.now());
         TestRun saved = repository.save(testRun);
 
-        
+        // Enqueue to RabbitMQ as JSON
         try {
-            TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName());
-            amqpTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, request);
+            TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName()); // Schema
+            String jsonMessage = objectMapper.writeValueAsString(request);
+            amqpTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, jsonMessage);
+            System.out.println("Enqueued message for TestRun ID: " + saved.getId()); // Log
         } catch (Exception e) {
-            
+            // Handle serialization/enqueue error
             throw new RuntimeException("Failed to enqueue test run", e);
         }
 
         return saved;
-    }
-
-    /**
-     * Updates an existing TestRun.
-     * CRITICAL: This method ONLY saves to the database and does NOT send a message
-     * to RabbitMQ, to prevent infinite loops.
-     */
-    public TestRun updateTestRun(TestRun testRun) {
-        return repository.save(testRun);
     }
 
     public Optional<TestRun> getTestRunById(Long id) {

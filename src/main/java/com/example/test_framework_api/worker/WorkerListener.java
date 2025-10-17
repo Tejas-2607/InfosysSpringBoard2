@@ -22,36 +22,22 @@ public class WorkerListener {
 
     @RabbitListener(queues = QUEUE)
     public void receiveMessage(TestRunRequest request) {
-        System.out.println("Received test run request: " + request);
-        
-        
-        Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
-        if (optionalTestRun.isEmpty()) {
-            System.err.println("TestRun with ID " + request.getTestId() + " not found. Cannot execute test.");
-            return; 
-        }
-        TestRun testRun = optionalTestRun.get();
-
+        System.out.println("Received test run request: " + request); // Raw log
         try {
-            
-            testRun.setStatus("IN_PROGRESS");
-            testRunService.updateTestRun(testRun);
-
-            
             testExecutor.executeTest(request);
-            
-            
-            testRun.setStatus("COMPLETED");
-
+            // Update TestRun status if present (handle missing)
+            Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
+            if (optionalTestRun.isPresent()) {
+                TestRun testRun = optionalTestRun.get();
+                testRun.setStatus("COMPLETED");
+                testRunService.createTestRun(testRun); // Reuse save for update
+                System.out.println("Finished processing and updated status for TestRun ID: " + request.getTestId()); // Log
+            } else {
+                System.err.println("TestRun ID " + request.getTestId() + " not found; skipping update");
+            }
         } catch (Exception e) {
-            System.err.println("Error processing message for TestRun ID " + request.getTestId() + ": " + e.getMessage());
-            
-            testRun.setStatus("FAILED");
-        
-        } finally {
-            
-            testRunService.updateTestRun(testRun);
-            System.out.println("Finished processing and updated status for TestRun ID: " + request.getTestId());
+            System.err.println("Error processing message: " + e.getMessage()); // Raw log
+            // No throw to avoid retry loop
         }
     }
 }

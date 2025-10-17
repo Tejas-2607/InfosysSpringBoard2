@@ -2,6 +2,7 @@ package com.example.test_framework_api.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 // import org.springframework.amqp.core.AmqpAdmin;
+import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -12,8 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.backoff.ExponentialBackOffPolicy;
-
+import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
 @Configuration
+@EnableRabbit
 public class RabbitMQConfig {
 
     @Autowired
@@ -53,5 +58,17 @@ public class RabbitMQConfig {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    // New: Fanout exchange example for broadcast (missing from Sprint 2 Team 2)
+    @Bean
+    public FanoutExchange fanoutExchange() {
+        return new FanoutExchange("fanoutExchange"); // Broadcast to all bound queues
+    }
+
+    // New: Binding for fanout (example for pub-sub pattern)
+    @Bean
+    public Binding fanoutBinding(Queue queue, FanoutExchange fanoutExchange) {
+        return BindingBuilder.bind(queue).to(fanoutExchange);
     }
 }
