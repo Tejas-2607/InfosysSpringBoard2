@@ -22,22 +22,23 @@ public class WorkerListener {
 
     @RabbitListener(queues = QUEUE)
     public void receiveMessage(TestRunRequest request) {
-        System.out.println("Received test run request: " + request); // Raw log
+        System.out.println("Received test run request: " + request);
+        Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
+        if (!optionalTestRun.isPresent()) {
+            System.err.println("TestRun ID " + request.getTestId() + " not found; skipping");
+            return;
+        }
+
+        TestRun testRun = optionalTestRun.get();
         try {
             testExecutor.executeTest(request);
-            // Update TestRun status if present (handle missing)
-            Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
-            if (optionalTestRun.isPresent()) {
-                TestRun testRun = optionalTestRun.get();
-                testRun.setStatus("COMPLETED");
-                testRunService.createTestRun(testRun); // Reuse save for update
-                System.out.println("Finished processing and updated status for TestRun ID: " + request.getTestId()); // Log
-            } else {
-                System.err.println("TestRun ID " + request.getTestId() + " not found; skipping update");
-            }
+            testRun.setStatus("COMPLETED"); // Success case
         } catch (Exception e) {
-            System.err.println("Error processing message: " + e.getMessage()); // Raw log
-            // No throw to avoid retry loop
+            testRun.setStatus("FAILED"); // Fail after retries
+            System.err.println("Test failed for ID " + request.getTestId() + ": " + e.getMessage());
+        } finally {
+            testRunService.createTestRun(testRun); // Update status in DB
+            System.out.println("Updated status for TestRun ID: " + request.getTestId() + " to " + testRun.getStatus());
         }
     }
 }

@@ -11,7 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.test_framework_api.TestFrameworkApiApplication.*;
+import static com.example.test_framework_api.TestFrameworkApiApplication.EXCHANGE;
+import static com.example.test_framework_api.TestFrameworkApiApplication.ROUTING_KEY;
 
 @Service
 public class TestRunService {
@@ -20,24 +21,22 @@ public class TestRunService {
     private TestRunRepository repository;
 
     @Autowired
-    private AmqpTemplate amqpTemplate;
+    private AmqpTemplate amqpTemplate; // Fixed: Used for sending
 
     @Autowired
-    private ObjectMapper objectMapper; // For JSON serialization
+    private ObjectMapper objectMapper; // Fixed: Used for serialization
 
     public TestRun createTestRun(TestRun testRun) {
-        // Business logic: Set initial status, etc.
         testRun.setStatus("PENDING");
         TestRun saved = repository.save(testRun);
 
-        // Enqueue to RabbitMQ as JSON
+        // Enqueue to RabbitMQ (Sprint 2 Team 3: Producer code)
         try {
-            TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName()); // Schema
-            String jsonMessage = objectMapper.writeValueAsString(request);
+            TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName());
+            String jsonMessage = objectMapper.writeValueAsString(request); // Sprint 2 Team 4: Jackson serialization
             amqpTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, jsonMessage);
-            System.out.println("Enqueued message for TestRun ID: " + saved.getId()); // Log
+            System.out.println("Enqueued message for TestRun ID: " + saved.getId()); // Raw log
         } catch (Exception e) {
-            // Handle serialization/enqueue error
             throw new RuntimeException("Failed to enqueue test run", e);
         }
 

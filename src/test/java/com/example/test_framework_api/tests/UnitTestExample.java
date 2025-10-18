@@ -28,6 +28,7 @@ public class UnitTestExample {
     @CsvSource({"1,1,2", "2,3,5"}) // Data-driven (Best practice)
     void parameterizedTest(int a, int b, int expected) {
         Assumptions.assumeTrue(a > 0 && b > 0); // Assumptions example (skip if false)
+        System.out.println(a+" and "+b);
         assertEquals(expected, a + b);
     }
 
