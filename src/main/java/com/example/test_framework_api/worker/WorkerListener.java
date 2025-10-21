@@ -31,14 +31,16 @@ public class WorkerListener {
 
         TestRun testRun = optionalTestRun.get();
         try {
+            System.out.println("Executing test for ID: " + request.getTestId());
             testExecutor.executeTest(request);
-            testRun.setStatus("COMPLETED"); // Success case
+            testRun.setStatus("COMPLETED"); // Set to COMPLETED on success
+            System.out.println("Test execution succeeded for ID: " + request.getTestId());
         } catch (Exception e) {
-            testRun.setStatus("FAILED"); // Fail after retries
+            testRun.setStatus("FAILED"); // Set to FAILED on exception
             System.err.println("Test failed for ID " + request.getTestId() + ": " + e.getMessage());
         } finally {
-            testRunService.createTestRun(testRun); // Update status in DB
-            System.out.println("Updated status for TestRun ID: " + request.getTestId() + " to " + testRun.getStatus());
+            TestRun updatedRun = testRunService.createTestRun(testRun); // Save updated status
+            System.out.println("Updated status for TestRun ID: " + updatedRun.getId() + " to " + updatedRun.getStatus());
         }
     }
 }

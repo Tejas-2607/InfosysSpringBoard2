@@ -36,7 +36,6 @@ public class RabbitMQConfig {
     @Bean
     public SimpleMessageListenerContainer listenerContainer(ConnectionFactory connectionFactory) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
-        // Configure retries (fixed: apply to advice chain, not RetryTemplate)
         ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
         backOffPolicy.setInitialInterval(500);
         backOffPolicy.setMultiplier(2.0);
@@ -46,7 +45,7 @@ public class RabbitMQConfig {
                 RetryInterceptorBuilder.stateless()
                         .maxAttempts(3)
                         .backOffPolicy(backOffPolicy)
-                        .recoverer(new RejectAndDontRequeueRecoverer()) // Fixed: recoverer for interceptor
+                        .recoverer(new RejectAndDontRequeueRecoverer())
                         .build()
         );
         return container;
@@ -57,7 +56,6 @@ public class RabbitMQConfig {
         return new ObjectMapper();
     }
 
-    // Fanout exchange for pub-sub (Sprint 2 Team 2)
     @Bean
     public FanoutExchange fanoutExchange() {
         return new FanoutExchange("fanoutExchange");
