@@ -9,11 +9,15 @@ public class TestRun {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String name;
-    private String status = "PENDING"; // Default
+    @Column(name = "status", nullable = false)
+    private String status = "PENDING";
     private String reportPath;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    // Constructors, getters, setters
+    public TestRun() {}
+    public TestRun(String name) { this.name = name; }
 
     // Getters/Setters
     public Long getId() { return id; }
