@@ -1,15 +1,10 @@
 package com.example.test_framework_api.worker;
 
-import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
-import com.example.test_framework_api.service.TestRunService;
+import com.example.test_framework_api.repository.TestRunRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.util.Optional;
-
-import static com.example.test_framework_api.TestFrameworkApiApplication.QUEUE;
 
 @Component
 public class WorkerListener {
@@ -18,29 +13,35 @@ public class WorkerListener {
     private TestExecutor testExecutor;
 
     @Autowired
-    private TestRunService testRunService;
+    private TestRunRepository testRunRepository;
 
-    @RabbitListener(queues = QUEUE)
-    public void receiveMessage(TestRunRequest request) {
+    @RabbitListener(queues = "testRunQueue")
+    public void receiveMessage(TestRunRequest request) throws Exception {
         System.out.println("Received test run request: " + request);
-        Optional<TestRun> optionalTestRun = testRunService.getTestRunById(request.getTestId());
-        if (!optionalTestRun.isPresent()) {
-            System.err.println("TestRun ID " + request.getTestId() + " not found; skipping");
-            return;
+
+        // Check if the test run is already completed
+        if (testRunRepository.findById(request.getTestId()).isPresent()) {
+            String status = testRunRepository.findById(request.getTestId()).get().getStatus();
+            if ("COMPLETED".equals(status)) {
+                System.out.println("TestRun ID: " + request.getTestId() + " is already completed. Skipping.");
+                return;
+            }
         }
 
-        TestRun testRun = optionalTestRun.get();
+        // Update status to IN_PROGRESS
+        testRunRepository.updateStatus(request.getTestId(), "IN_PROGRESS");
+        System.out.println("Updated status for TestRun ID: " + request.getTestId() + " to IN_PROGRESS");
+
         try {
-            System.out.println("Executing test for ID: " + request.getTestId());
             testExecutor.executeTest(request);
-            testRun.setStatus("COMPLETED"); // Set to COMPLETED on success
+            // Update status to COMPLETED on success
+            testRunRepository.updateStatus(request.getTestId(), "COMPLETED");
             System.out.println("Test execution succeeded for ID: " + request.getTestId());
         } catch (Exception e) {
-            testRun.setStatus("FAILED"); // Set to FAILED on exception
-            System.err.println("Test failed for ID " + request.getTestId() + ": " + e.getMessage());
-        } finally {
-            TestRun updatedRun = testRunService.createTestRun(testRun); // Save updated status
-            System.out.println("Updated status for TestRun ID: " + updatedRun.getId() + " to " + updatedRun.getStatus());
+            // Update status to FAILED on failure
+            testRunRepository.updateStatus(request.getTestId(), "FAILED");
+            System.out.println("Test failed for ID " + request.getTestId() + ": " + e.getMessage());
+            throw e; // Re-queue or handle failure as needed
         }
     }
 }
