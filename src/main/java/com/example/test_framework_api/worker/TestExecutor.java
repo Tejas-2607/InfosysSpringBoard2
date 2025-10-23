@@ -16,58 +16,47 @@ public class TestExecutor {
         System.out.println("Executing test logic for TestRun ID: " + request.getTestId());
         long startTime = System.currentTimeMillis();
 
-        // Initialize WebDriver with WebDriverManager
         WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless"); // Run in headless mode
-        options.addArguments("--disable-gpu"); // Disable GPU for stability
+        options.addArguments("--headless");
+        options.addArguments("--disable-gpu");
         WebDriver driver = new ChromeDriver(options);
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
         driver.manage().window().maximize();
 
         try {
-            // Step 1: Navigate to the test URL
             driver.get("http://127.0.0.1:5501/testpage.html");
             System.out.println("Navigated to URL for ID: " + request.getTestId());
             System.out.println("Actual URL: " + driver.getCurrentUrl());
             System.out.println("Actual Title: " + driver.getTitle());
 
-            // Step 2: Validate page title
             String expectedTitle = "Test Page";
             String actualTitle = driver.getTitle();
             if (!actualTitle.contains(expectedTitle)) {
-                throw new Exception("Title mismatch: expected '" + expectedTitle + "', got '" + actualTitle
-                        + "' for ID: " + request.getTestId());
+                throw new Exception("Title mismatch: expected '" + expectedTitle + "', got '" + actualTitle + "' for ID: " + request.getTestId());
             }
             System.out.println("Title validated for ID: " + request.getTestId());
 
-            // Step 3: Simulate additional test action (e.g., click or input)
             Thread.sleep(500); // Simulate action delay
             System.out.println("Performed test action for ID: " + request.getTestId());
 
-            // Step 4: Final validation
             if (driver.getCurrentUrl().isEmpty()) {
                 throw new Exception("URL validation failed for ID: " + request.getTestId());
             }
             System.out.println("URL validated for ID: " + request.getTestId());
 
-            // Success case
             long duration = System.currentTimeMillis() - startTime;
             System.out.println("Test completed successfully for ID: " + request.getTestId() + " in " + duration + "ms");
-
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            System.err.println("Test execution failed for ID " + request.getTestId() + " after " + duration + "ms: "
-                    + e.getMessage());
-            throw e; // Propagate to WorkerListener for status update
+            System.err.println("Test execution failed for ID " + request.getTestId() + " after " + duration + "ms: " + e.getMessage());
+            throw e;
         } finally {
-            // Cleanup WebDriver after each test
             if (driver != null) {
                 try {
-                    driver.quit(); // Close and terminate the WebDriver session
+                    driver.quit();
                 } catch (Exception e) {
-                    System.err.println(
-                            "Failed to clean up WebDriver for ID " + request.getTestId() + ": " + e.getMessage());
+                    System.err.println("Failed to clean up WebDriver for ID " + request.getTestId() + ": " + e.getMessage());
                 }
             }
         }

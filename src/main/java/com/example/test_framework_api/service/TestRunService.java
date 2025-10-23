@@ -20,16 +20,20 @@ public class TestRunService {
     private TestRunRepository repository;
 
     @Autowired
-    private AmqpTemplate amqpTemplate; // Used for sending
+    private AmqpTemplate amqpTemplate;
 
     public TestRun createTestRun(TestRun testRun) {
         testRun.setStatus("PENDING");
         TestRun saved = repository.save(testRun);
 
-        // Enqueue TestRunRequest object directly (no manual serialization)
-        TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName());
-        amqpTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, request);
-        System.out.println("Enqueued message for TestRun ID: " + saved.getId()); // Raw log
+        try {
+            TestRunRequest request = new TestRunRequest(saved.getId(), saved.getName());
+            amqpTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, request);
+            System.out.println("Enqueued message for TestRun ID: " + saved.getId());
+        } catch (Exception e) {
+            System.err.println("Failed to enqueue message for TestRun ID: " + saved.getId() + ": " + e.getMessage());
+            // Optionally, update status to FAILED or rethrow
+        }
 
         return saved;
     }
