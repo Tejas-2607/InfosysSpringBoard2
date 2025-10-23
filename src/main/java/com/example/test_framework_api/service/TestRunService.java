@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
-import static com.example.test_framework_api.TestFrameworkApiApplication.EXCHANGE;
-import static com.example.test_framework_api.TestFrameworkApiApplication.ROUTING_KEY;
+import static com.example.test_framework_api.config.RabbitMQConfig.EXCHANGE;
+import static com.example.test_framework_api.config.RabbitMQConfig.ROUTING_KEY;
 
 @Service
 public class TestRunService {

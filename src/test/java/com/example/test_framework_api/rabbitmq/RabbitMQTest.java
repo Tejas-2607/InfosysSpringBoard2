@@ -5,8 +5,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static com.example.test_framework_api.TestFrameworkApiApplication.EXCHANGE;
-import static com.example.test_framework_api.TestFrameworkApiApplication.ROUTING_KEY;
+import static com.example.test_framework_api.config.RabbitMQConfig.EXCHANGE;
+import static com.example.test_framework_api.config.RabbitMQConfig.ROUTING_KEY;
 
 @SpringBootTest
 public class RabbitMQTest {
