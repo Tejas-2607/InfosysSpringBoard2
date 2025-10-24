@@ -20,8 +20,8 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 @EnableRabbit
 public class RabbitMQConfig {
 
-    public static final String EXCHANGE = "testRunExchange"; // Define constant
-    public static final String ROUTING_KEY = "testRunKey";  // Define constant
+    public static final String EXCHANGE = "testRunExchange";
+    public static final String ROUTING_KEY = "testRunKey"; 
 
     @Bean
     public Jackson2JsonMessageConverter jsonMessageConverter(ObjectMapper objectMapper) {
@@ -60,22 +60,22 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue queue() {
-        return new Queue("testRunQueue", true); // Durable queue
+        return new Queue("testRunQueue", true);
     }
 
     @Bean
     public Queue dlq() {
-        return new Queue("testRunDLQ", true); // Dead letter queue
+        return new Queue("testRunDLQ", true);
     }
 
     @Bean
     public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE, true, false); // Use constant
+        return new DirectExchange(EXCHANGE, true, false);
     }
 
     @Bean
     public Binding binding(Queue queue, DirectExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY); // Use constant
+        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }
 
     @Bean
