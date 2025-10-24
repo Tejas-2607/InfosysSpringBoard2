@@ -5,6 +5,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -21,7 +22,7 @@ import org.springframework.retry.backoff.ExponentialBackOffPolicy;
 public class RabbitMQConfig {
 
     public static final String EXCHANGE = "testRunExchange";
-    public static final String ROUTING_KEY = "testRunKey"; 
+    public static final String ROUTING_KEY = "testRunKey";
 
     @Bean
     public Jackson2JsonMessageConverter jsonMessageConverter(ObjectMapper objectMapper) {
@@ -48,15 +49,14 @@ public class RabbitMQConfig {
                         .maxAttempts(3)
                         .backOffPolicy(backOffPolicy)
                         .recoverer(new RejectAndDontRequeueRecoverer())
-                        .build()
-        );
+                        .build());
         return container;
     }
 
-    @Bean
-    public ObjectMapper objectMapper() {
-        return new ObjectMapper();
-    }
+    // @Bean
+    // public ObjectMapper objectMapper() {
+    // return new ObjectMapper();
+    // }
 
     @Bean
     public Queue queue() {
@@ -68,9 +68,13 @@ public class RabbitMQConfig {
         return new Queue("testRunDLQ", true);
     }
 
+    // @Bean
+    // public DirectExchange exchange() {
+    // return new DirectExchange(EXCHANGE, true, false);
+    // }
     @Bean
-    public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE, true, false);
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE, true, false);
     }
 
     @Bean
