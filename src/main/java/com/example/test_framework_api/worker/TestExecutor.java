@@ -25,7 +25,7 @@ public class TestExecutor {
         driver.manage().window().maximize();
 
         try {
-            driver.get("http://127.0.0.1:5501/testpage.html");
+            driver.get("http://127.0.0.1:5500/testpage.html");
             System.out.println("Navigated to URL for ID: " + request.getTestId());
             System.out.println("Actual URL: " + driver.getCurrentUrl());
             System.out.println("Actual Title: " + driver.getTitle());
