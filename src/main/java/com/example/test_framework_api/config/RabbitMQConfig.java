@@ -3,7 +3,7 @@ package com.example.test_framework_api.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
+// import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
@@ -78,12 +78,12 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding binding(Queue queue, DirectExchange exchange) {
+    public Binding binding(Queue queue, TopicExchange exchange) {  // Changed to TopicExchange
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
     }
 
     @Bean
-    public Binding dlqBinding(Queue dlq, DirectExchange exchange) {
+    public Binding dlqBinding(Queue dlq, TopicExchange exchange) {  // Changed to TopicExchange
         return BindingBuilder.bind(dlq).to(exchange).with("dlq.testRunKey");
     }
 }

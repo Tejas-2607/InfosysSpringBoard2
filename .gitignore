@@ -40,3 +40,6 @@ application.properties
 application-dev.properties
 
 reports
+
+docker-compose.yml
+Dockerfile
