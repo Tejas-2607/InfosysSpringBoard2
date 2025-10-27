@@ -7,9 +7,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TestResultService {
-
-    @Autowired
-    private TestResultRepository repository;
+    @Autowired private TestResultRepository repository;
 
     public TestResult saveTestResult(TestResult result) {
         return repository.save(result);

@@ -22,4 +22,6 @@ public class TestResult {
     private Long duration; // ms
     private String errorMessage;
     private LocalDateTime createdAt;
+
+    private Long testRunId;          // NEW: FK to TestRun
 }

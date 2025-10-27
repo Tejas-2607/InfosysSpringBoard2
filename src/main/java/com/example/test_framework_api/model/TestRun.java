@@ -26,4 +26,5 @@ public class TestRun {
     private String reportPath;
 
     private String status = "PENDING"; // Default status
+    
 }
