@@ -33,8 +33,8 @@ public class UITestExample {
     @Step("UI Test Step")
     @Test
     void uiTest() {
-        testPage.navigateToTestPage();
         testPage.validateTitle();
+        testPage.performAction();
         attachScreenshot("After Test"); // Simulated
     }
 

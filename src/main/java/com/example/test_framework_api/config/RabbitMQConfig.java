@@ -77,14 +77,14 @@ import org.springframework.retry.annotation.EnableRetry;
 @EnableRetry
 public class RabbitMQConfig {
     public static final String EXCHANGE = "testRunExchange";
-    public static final String ROUTING_KEY = "test.run";
+    public static final String ROUTING_KEY = "testRunKey";
     public static final String QUEUE = "testRunQueue";
-    public static final String DLQ = "testRunDLQ"; // DLQ
+    public static final String DLQ = "dlq.testRunKey"; // DLQ
 
     @Bean
     public Queue testRunQueue() {
         return QueueBuilder.durable(QUEUE).withArgument("x-dead-letter-exchange", EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", "dlq").build();
+                .withArgument("x-dead-letter-routing-key", "dlq.testRunKey").build();
     }
 
     @Bean
@@ -93,8 +93,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public DirectExchange exchange() {
-        return new DirectExchange(EXCHANGE);
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE, true, false);
     }
 
     @Bean
@@ -104,7 +104,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding dlqBinding() {
-        return BindingBuilder.bind(deadLetterQueue()).to(exchange()).with("dlq");
+        return BindingBuilder.bind(deadLetterQueue()).to(exchange()).with(DLQ);
     }
 
     @Bean
