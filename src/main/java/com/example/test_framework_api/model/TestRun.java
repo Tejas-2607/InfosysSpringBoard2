@@ -1,30 +1,27 @@
 package com.example.test_framework_api.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
+@Table(name = "test_run")  // Explicit table name for clarity
 public class TestRun {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
-
     private String name;
-
-    @Column(name = "report_path")
+    private String status;
     private String reportPath;
+    private LocalDateTime createdAt;
 
-    private String status = "PENDING"; // Default status
-    
+
+    // New: Bidirectional relationship to TestResults
+    @OneToMany(mappedBy = "testRun", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<TestResult> testResults = new ArrayList<>();
 }

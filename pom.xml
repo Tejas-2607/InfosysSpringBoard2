@@ -15,8 +15,10 @@
 	<description>Spring Boot API for Automated Regression Test Suite Framework</description>
 	<properties>
 		<java.version>21</java.version>
+		<allure.version>2.29.0</allure.version>
 	</properties>
 	<dependencies>
+		<!-- Existing dependencies... -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -40,60 +42,58 @@
 			<artifactId>spring-retry</artifactId>
 		</dependency>
 		<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>rabbitmq</artifactId>
-    <version>1.19.3</version>
-    <scope>test</scope>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>rabbitmq</artifactId>
+			<version>1.19.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.validation</groupId>
+			<artifactId>jakarta.validation-api</artifactId>
+			<version>3.0.2</version>
+		</dependency>
+		<dependency>
+    <groupId>org.hibernate.validator</groupId>
+    <artifactId>hibernate-validator</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
 </dependency>
 		<dependency>
-    <groupId>com.fasterxml.jackson.datatype</groupId>
-    <artifactId>jackson-datatype-jsr310</artifactId>
-</dependency>
-<dependency>
-    <groupId>jakarta.validation</groupId>
-    <artifactId>jakarta.validation-api</artifactId>
-    <version>3.0.2</version>
-</dependency>
-<dependency>
         <groupId>io.qameta.allure</groupId>
-        <artifactId>allure-junit5</artifactId>
-        <version>2.29.0</version>
-        <scope>test</scope>
+        <artifactId>allure-testng</artifactId>
+        <version>2.29.0</version> <!-- check latest version -->
     </dependency>
-
-    <!-- SLF4J + Logback (structured logging) -->
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
+		<dependency>
+        <groupId>org.hibernate.orm</groupId>
+        <artifactId>hibernate-core</artifactId>
+        <version>6.5.2.Final</version> <!-- match your JPA/Spring Boot version -->
     </dependency>
-    <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-    </dependency>
-
-    <!-- JaCoCo for code coverage -->
-    <dependency>
-        <groupId>org.jacoco</groupId>
-        <artifactId>org.jacoco.core</artifactId>
-        <version>0.8.12</version>
-        <scope>test</scope>
-    </dependency>
-
-    <!-- REST-Assured (Integration tests) -->
-    <dependency>
+		<dependency>
         <groupId>io.rest-assured</groupId>
         <artifactId>rest-assured</artifactId>
-        <version>5.5.0</version>
+        <version>5.4.0</version> <!-- latest stable -->
         <scope>test</scope>
     </dependency>
-
-    <!-- WireMock (Mock API) -->
-    <dependency>
-        <groupId>com.github.tomakehurst</groupId>
-        <artifactId>wiremock-jre8</artifactId>
-        <version>3.0.1</version>
-        <scope>test</scope>
-    </dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
+			<version>1.9.22.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<!-- Existing others... -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
@@ -106,6 +106,11 @@
 			<scope>runtime</scope>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+        <groupId>org.seleniumhq.selenium</groupId>
+        <artifactId>selenium-java</artifactId>
+        <version>4.23.0</version> <!-- Use the latest stable version -->
+    </dependency>
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
@@ -120,40 +125,10 @@
 			<groupId>org.testng</groupId>
 			<artifactId>testng</artifactId>
 			<version>7.10.2</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-java</artifactId>
-			<version>4.25.0</version>
-		</dependency>
-		<dependency>
-			<groupId>io.rest-assured</groupId>
-			<artifactId>rest-assured</artifactId>
-			<version>5.5.0</version>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.github.bonigarcia</groupId>
-			<artifactId>webdrivermanager</artifactId>
-			<version>5.9.2</version>
-			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<configuration>
-					<annotationProcessorPaths>
-						<path>
-							<groupId>org.projectlombok</groupId>
-							<artifactId>lombok</artifactId>
-						</path>
-					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -167,30 +142,13 @@
 				</configuration>
 			</plugin>
 			<plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.12</version>
-            <executions>
-                <execution>
-                    <goals><goal>prepare-agent</goal></goals>
-                </execution>
-                <execution>
-                    <id>report</id>
-                    <phase>test</phase>
-                    <goals><goal>report</goal></goals>
-                </execution>
-            </executions>
-        </plugin>
-
-        <!-- Allure Maven plugin -->
-        <plugin>
-            <groupId>io.qameta.allure</groupId>
-            <artifactId>allure-maven</artifactId>
-            <version>2.12.0</version>
-            <configuration>
-                <reportVersion>2.29.0</reportVersion>
-            </configuration>
-        </plugin>
+				<groupId>io.qameta.allure</groupId>
+				<artifactId>allure-maven</artifactId>
+				<version>2.12.0</version>
+				<configuration>
+					<reportVersion>${allure.version}</reportVersion>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>
