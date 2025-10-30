@@ -1,394 +1,109 @@
+// src/main/java/com/example/test_framework_api/service/ReportService.java
 package com.example.test_framework_api.service;
 
+import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestResult;
-import com.example.test_framework_api.repository.TestResultRepository;
-import io.qameta.allure.Attachment;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-// import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.io.FileWriter;
-import java.io.IOException;
-// import java.nio.file.Files;
-// import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class ReportService {
 
-    @Autowired
-    private TestResultRepository testResultRepository;
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    @Autowired
-    private JavaMailSender mailSender;
+    public ResponseEntity<String> generateHtmlReportForAll(List<TestRun> testRuns) {
+        String html = buildHtml(testRuns);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_HTML);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=test-runs-report.html");
+        return ResponseEntity.ok().headers(headers).body(html);
+    }
 
-    @Value("${report.output.dir:reports}")
-    private String reportOutputDir;
+    private String buildHtml(List<TestRun> testRuns) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
+        sb.append("<meta charset=\"UTF-8\">\n<title>Test Runs Report</title>\n");
+        sb.append("<style>").append(getCss()).append("</style>\n");
+        sb.append("</head>\n<body>\n<div class=\"container\">\n");
+        sb.append("<h1>Test Execution Report</h1>\n");
+        sb.append("<p class=\"generated\">Generated: ")
+          .append(LocalDateTime.now().format(FMT)).append("</p>\n");
 
-    public String generateReport() {
-        List<TestResult> results = testResultRepository.findAll();
-        System.out.println("Found " + results.size() + " test results: " + results); // Debug log
-        long passCount = results.stream()
-                .filter(r -> r.getStatus() != null && (r.getStatus().equalsIgnoreCase("PASSED") || r.getStatus().equalsIgnoreCase("PASS") || r.getStatus().equalsIgnoreCase("COMPLETED")))
-                .count();
-        long failCount = results.stream()
-                .filter(r -> r.getStatus() != null && r.getStatus().equalsIgnoreCase("FAILED"))
-                .count();
-        long totalDuration = results.stream().mapToLong(r -> r.getDuration() != null ? r.getDuration() : 0L).sum();
+        if (testRuns.isEmpty()) {
+            sb.append("<p class=\"no-data\">No test runs available.</p>\n");
+        } else {
+            sb.append("<table>\n<thead><tr>")
+              .append("<th>ID</th><th>Name</th><th>Status</th><th>Created</th><th>Results</th>")
+              .append("</tr></thead>\n<tbody>\n");
+            for (TestRun r : testRuns) {
+                sb.append("<tr class=\"").append(r.getStatus().toLowerCase()).append("\">")
+                  .append("<td>").append(r.getId()).append("</td>")
+                  .append("<td>").append(esc(r.getName())).append("</td>")
+                  .append("<td><span class=\"status ").append(r.getStatus().toLowerCase()).append("\">")
+                  .append(r.getStatus()).append("</span></td>")
+                  .append("<td>").append(r.getCreatedAt().format(FMT)).append("</td>")
+                  .append("<td>");
 
-        // Flakiness detection (new feature)
-        double failureRate = (double) failCount / results.size();
-        boolean isFlaky = failureRate > 0.2;
-        if (isFlaky) {
-            System.err.println("Flaky Suite Detected: Failure rate " + (failureRate * 100) + "%"); // Log instead of Allure (service context)
-            attachFlakinessReport("Failure rate: " + (failureRate * 100) + "%"); // Simulated Allure attachment via log
-        }
-
-        // Sort results by createdAt DESC (recent first)
-        List<TestResult> sortedResults = results.stream()
-                .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
-                .collect(Collectors.toList());
-
-        StringBuilder htmlReport = new StringBuilder();
-        htmlReport.append("<!DOCTYPE html>\n")
-                .append("<html lang='en'>\n")
-                .append("<head>\n")
-                .append("    <meta charset='UTF-8'>\n")
-                .append("    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n")
-                .append("    <title>Test Execution Report</title>\n")
-                .append("    <style>\n")
-                .append(getCss())
-                .append("    </style>\n")
-                .append("    <!-- Chart.js for trends (new feature) -->\n")
-                .append("    <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>\n")
-                .append("</head>\n")
-                .append("<body>\n")
-                .append("    <div class='container'>\n")
-                .append("        <header class='header'>\n")
-                .append("            <h1>Test Execution Report</h1>\n")
-                .append("            <p class='timestamp'>Generated on ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMMM dd, yyyy 'at' HH:mm:ss"))).append("</p>\n")
-                .append("        </header>\n")
-                .append("        <div class='summary'>\n")
-                .append("            <div class='summary-card'>\n")
-                .append("                <span class='summary-label'>Total Tests</span>\n")
-                .append("                <span class='summary-value'>").append(results.size()).append("</span>\n")
-                .append("            </div>\n")
-                .append("            <div class='summary-card passed'>\n")
-                .append("                <span class='summary-label'>Passed</span>\n")
-                .append("                <span class='summary-value'>").append(passCount).append("</span>\n")
-                .append("            </div>\n")
-                .append("            <div class='summary-card failed'>\n")
-                .append("                <span class='summary-label'>Failed</span>\n")
-                .append("                <span class='summary-value'>").append(failCount).append("</span>\n")
-                .append("            </div>\n")
-                .append("            <div class='summary-card'>\n")
-                .append("                <span class='summary-label'>Total Duration</span>\n")
-                .append("                <span class='summary-value'>").append(totalDuration).append("ms</span>\n")
-                .append("            </div>\n")
-                .append("            <!-- Flakiness indicator (new) -->\n")
-                .append("            <div class='summary-card").append(isFlaky ? " failed" : " passed").append("'>\n")
-                .append("                <span class='summary-label'>Stability</span>\n")
-                .append("                <span class='summary-value'>").append(isFlaky ? "Flaky" : "Stable").append("</span>\n")
-                .append("            </div>\n")
-                .append("        </div>\n")
-                .append("        <!-- Trend Chart (new) -->\n")
-                .append("        <div class='chart-section'>\n")
-                .append("            <h2>Execution Trends</h2>\n")
-                .append("            <canvas id='trendChart' width='400' height='200'></canvas>\n")
-                .append("        </div>\n")
-                .append("        <div class='results-section'>\n")
-                .append("            <h2>Test Results</h2>\n")
-                .append("            <table class='results-table'>\n")
-                .append("                <thead>\n")
-                .append("                    <tr>\n")
-                .append("                        <th>ID</th>\n")
-                .append("                        <th>Test Name</th>\n")
-                .append("                        <th>Status</th>\n")
-                .append("                        <th>Duration (ms)</th>\n")
-                .append("                        <th>Created At</th>\n")
-                .append("                    </tr>\n")
-                .append("                </thead>\n")
-                .append("                <tbody id='results-tbody'>\n");
-
-        // Show only top 5 initially
-        List<TestResult> top5Results = sortedResults.subList(0, Math.min(5, sortedResults.size()));
-        for (TestResult result : top5Results) {
-            String statusClass = result.getStatus() != null && (result.getStatus().equalsIgnoreCase("PASSED") || result.getStatus().equalsIgnoreCase("PASS") || result.getStatus().equalsIgnoreCase("COMPLETED")) ? "status-passed" : "status-failed";
-            htmlReport.append("                    <tr data-index='").append(top5Results.indexOf(result)).append("'>\n")
-                    .append("                        <td class='id-cell'>").append(result.getId()).append("</td>\n")
-                    .append("                        <td>").append(escapeHtml(result.getTestName())).append("</td>\n")
-                    .append("                        <td><span class='status-badge ").append(statusClass).append("'>").append(result.getStatus() != null ? result.getStatus() : "N/A").append("</span></td>\n")
-                    .append("                        <td class='duration-cell'>").append(result.getDuration() != null ? result.getDuration() : 0).append("</td>\n")
-                    .append("                        <td class='date-cell'>").append(result.getCreatedAt() != null ? result.getCreatedAt() : "").append("</td>\n")
-                    .append("                    </tr>\n");
-        }
-
-        // Hide rows beyond top 5
-        for (int i = 5; i < sortedResults.size(); i++) {
-            TestResult result = sortedResults.get(i);
-            String statusClass = result.getStatus() != null && (result.getStatus().equalsIgnoreCase("PASSED") || result.getStatus().equalsIgnoreCase("PASS") || result.getStatus().equalsIgnoreCase("COMPLETED")) ? "status-passed" : "status-failed";
-            htmlReport.append("                    <tr data-index='").append(i).append("' style='display: none;'>\n")
-                    .append("                        <td class='id-cell'>").append(result.getId()).append("</td>\n")
-                    .append("                        <td>").append(escapeHtml(result.getTestName())).append("</td>\n")
-                    .append("                        <td><span class='status-badge ").append(statusClass).append("'>").append(result.getStatus() != null ? result.getStatus() : "N/A").append("</span></td>\n")
-                    .append("                        <td class='duration-cell'>").append(result.getDuration() != null ? result.getDuration() : 0).append("</td>\n")
-                    .append("                        <td class='date-cell'>").append(result.getCreatedAt() != null ? result.getCreatedAt() : "").append("</td>\n")
-                    .append("                    </tr>\n");
-        }
-
-        htmlReport.append("                </tbody>\n")
-                .append("            </table>\n")
-                .append("            <button id='load-more-btn' onclick='loadMoreRows()' style='display: ").append(sortedResults.size() > 5 ? "block" : "none").append("; margin: 20px auto; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;'>Load More</button>\n")
-                .append("        </div>\n")
-                .append("        <footer class='footer'>\n")
-                .append("            <p>Report generated by Test Framework API</p>\n")
-                .append("        </footer>\n")
-                .append("    </div>\n")
-                .append("    <!-- Chart.js script (new) -->\n")
-                .append("    <script>\n")
-                .append("        let currentIndex = 5;\n")
-                .append("        const rows = document.querySelectorAll('#results-tbody tr');\n")
-                .append("        function loadMoreRows() {\n")
-                .append("            for (let i = currentIndex; i < Math.min(currentIndex + 5, rows.length); i++) {\n")
-                .append("                rows[i].style.display = 'table-row';\n")
-                .append("            }\n")
-                .append("            currentIndex += 5;\n")
-                .append("            if (currentIndex >= rows.length) {\n")
-                .append("                document.getElementById('load-more-btn').style.display = 'none';\n")
-                .append("            }\n")
-                .append("        }\n")
-                .append("        // Trend chart\n")
-                .append("        const ctx = document.getElementById('trendChart').getContext('2d');\n")
-                .append("        const passRates = [").append(calculatePassRates(results)).append("]; // Dynamic pass %\n")
-                .append("        new Chart(ctx, {\n")
-                .append("            type: 'line',\n")
-                .append("            data: {\n")
-                .append("                labels: ['Run1', 'Run2', 'Run3'], // Simplified; expand dynamically\n")
-                .append("                datasets: [{ label: 'Pass %', data: passRates, borderColor: 'green' }]\n")
-                .append("            }\n")
-                .append("        });\n")
-                .append("    </script>\n")
-                .append("</body>\n")
-                .append("</html>");
-
-        String fileName = "test_report_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".html";
-        String filePath = reportOutputDir + "/" + fileName;
-
-        try {
-            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(reportOutputDir));
-            try (FileWriter writer = new FileWriter(filePath)) {
-                writer.write(htmlReport.toString());
+                // List<TestResult> results = r.getTestResults();
+                // if (results == null || results.isEmpty()) {
+                //     sb.append("<em>None</em>");
+                // } else {
+                //     sb.append("<ul class=\"results\">");
+                //     for (TestResult res : results) {
+                //         sb.append("<li><strong>").append(esc(res.getTestName())).append("</strong> - ")
+                //           .append("<span class=\"status ").append(res.getStatus().toLowerCase()).append("\">")
+                //           .append(res.getStatus()).append("</span> (")
+                //           .append(res.getDuration()).append(" ms)</li>");
+                //     }
+                //     sb.append("</ul>");
+                // }
+                sb.append("</td></tr>\n");
             }
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to generate report: " + e.getMessage(), e);
+            sb.append("</tbody></table>\n");
         }
-
-        // Send email summary (new feature)
-        sendEmailSummary(results, isFlaky ? "Flaky" : "Stable");
-
-        return filePath;
-    }
-
-    private String calculatePassRates(List<TestResult> results) {
-        // Simplified: Last 3 runs' pass rates
-        return "80, 90, 85"; // Placeholder; compute from grouped results
-    }
-
-    @Attachment(value = "Flakiness Report", type = "text/plain")
-    public byte[] attachFlakinessReport(String content) {
-        return content.getBytes(); // For Allure in test context; logs here
-    }
-
-    private void sendEmailSummary(List<TestResult> results, String status) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo("ingrock737@gmail.com");
-        message.setSubject("Test Report: " + status);
-        message.setText("Summary: " + results.size() + " tests, " + status + ". Failure rate: " + ((double) results.stream().filter(r -> "FAILED".equals(r.getStatus())).count() / results.size() * 100) + "%");
-        mailSender.send(message);
+        sb.append("</div>\n</body>\n</html>");
+        return sb.toString();
     }
 
     private String getCss() {
         return """
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: linear-gradient(90deg,rgba(173, 206, 217, 1) 0%, rgba(87, 199, 133, 1) 50%, rgba(208, 219, 138, 1) 89%, rgba(247, 235, 126, 1) 100%);
-                    padding: 20px;
-                    min-height: 100vh;
-                }
-                
-                .container {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                    overflow: hidden;
-                }
-                
-                .header {
-                    background: linear-gradient(90deg,rgba(26, 53, 54, 1) 8%, rgba(50, 54, 53, 1) 51%, rgba(11, 9, 54, 1) 100%);
-                    color: white;
-                    padding: 40px;
-                    text-align: center;
-                }
-                
-                .header h1 {
-                    font-size: 2.5em;
-                    margin-bottom: 10px;
-                    font-weight: 700;
-                }
-                
-                .timestamp {
-                    font-size: 0.95em;
-                    opacity: 0.9;
-                    font-style: italic;
-                }
-                
-                .summary {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 20px;
-                    padding: 30px;
-                    background: #f8f9fa;
-                    border-bottom: 1px solid #e0e0e0;
-                }
-                
-                .summary-card {
-                    background: white;
-                    border-radius: 8px;
-                    padding: 20px;
-                    text-align: center;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                
-                .summary-card.passed {
-                    border-left: 4px solid #28a745;
-                }
-                
-                .summary-card.failed {
-                    border-left: 4px solid #dc3545;
-                }
-                
-                .summary-label {
-                    font-size: 0.85em;
-                    color: #6c757d;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-                
-                .summary-value {
-                    font-size: 1.8em;
-                    font-weight: 700;
-                    color: #333;
-                }
-                
-                .chart-section {
-                    padding: 30px;
-                    text-align: center;
-                }
-                
-                .chart-section h2 {
-                    margin-bottom: 20px;
-                    color: #333;
-                }
-                
-                .results-section {
-                    padding: 30px;
-                }
-                
-                .results-section h2 {
-                    font-size: 1.5em;
-                    margin-bottom: 20px;
-                    color: #333;
-                    border-bottom: 2px solid #667eea;
-                    padding-bottom: 10px;
-                }
-                
-                .results-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                
-                .results-table thead {
-                    background: #f8f9fa;
-                }
-                
-                .results-table th {
-                    padding: 15px;
-                    text-align: left;
-                    font-weight: 600;
-                    color: #333;
-                    border-bottom: 2px solid #dee2e6;
-                    font-size: 0.95em;
-                }
-                
-                .results-table td {
-                    padding: 12px 15px;
-                    border-bottom: 1px solid #dee2e6;
-                    color: #555;
-                }
-                
-                .results-table tbody tr:hover {
-                    background-color: #f8f9fa;
-                }
-                
-                .status-badge {
-                    display: inline-block;
-                    padding: 6px 12px;
-                    border-radius: 20px;
-                    font-size: 0.85em;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                }
-                
-                .status-passed {
-                    background-color: #d4edda;
-                    color: #155724;
-                }
-                
-                .status-failed {
-                    background-color: #f8d7da;
-                    color: #721c24;
-                }
-                
-                .id-cell, .duration-cell, .date-cell {
-                    font-family: 'Courier New', monospace;
-                    font-size: 0.9em;
-                }
-                
-                .footer {
-                    background: #f8f9fa;
-                    padding: 20px;
-                    text-align: center;
-                    color: #6c757d;
-                    border-top: 1px solid #e0e0e0;
-                    font-size: 0.9em;
-                }
-                """;
+            body{font-family:Arial,sans-serif;background:#f4f6f9;color:#333;margin:0}
+            .container{max-width:1200px;margin:40px auto;padding:20px;background:#fff;border-radius:12px;
+                       box-shadow:0 4px 20px rgba(0,0,0,.1)}
+            h1{text-align:center;color:#2c3e50;margin-bottom:10px}
+            .generated{text-align:center;color:#7f8c8d;font-size:.9em;margin-bottom:30px}
+            table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.95em}
+            th{background:#3498db;color:#fff;padding:12px 15px;text-align:left;font-weight:600}
+            td{padding:12px 15px;border-bottom:1px solid #ddd;vertical-align:top}
+            tr:hover{background:#f8f9fa}
+            .status{padding:4px 10px;border-radius:20px;font-size:.8em;font-weight:bold;
+                    text-transform:uppercase;color:#fff}
+            .status.completed{background:#27ae60}
+            .status.failed{background:#c0392b}
+            .status.pending,.status.running{background:#f39c12}
+            .results{margin:8px 0;padding-left:20px;list-style:none}
+            .results li{margin:6px 0}
+            .no-data{text-align:center;font-style:italic;color:#95a5a6;padding:40px}
+            @media(max-width:768px){
+                table,thead,tbody,th,td,tr{display:block}
+                thead tr{position:absolute;top:-9999px;left:-9999px}
+                tr{margin-bottom:15px;border:1px solid #ccc;border-radius:8px}
+                td{border:none;position:relative;padding-left:50%}
+                td:before{content:attr(data-label);position:absolute;left:15px;width:45%;
+                         font-weight:bold;color:#2c3e50}
+            }
+            """;
     }
 
-    private String escapeHtml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
+    private String esc(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

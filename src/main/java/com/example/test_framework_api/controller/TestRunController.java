@@ -1,9 +1,11 @@
+// src/main/java/com/example/test_framework_api/controller/TestRunController.java
 package com.example.test_framework_api.controller;
 
 import com.example.test_framework_api.model.TestRun;
-import com.example.test_framework_api.service.ReportService;
+import com.example.test_framework_api.model.TestRunRequest;
+import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.service.TestRunService;
-import jakarta.validation.Valid;
+import com.example.test_framework_api.service.TestResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,30 +20,24 @@ public class TestRunController {
     private TestRunService testRunService;
 
     @Autowired
-    private ReportService reportService; // New dependency
+    private TestResultService testResultService;
 
+    // CREATE test_run
     @PostMapping
-    public ResponseEntity<TestRun> createTestRun(@Valid @RequestBody TestRun testRun) {
-        TestRun saved = testRunService.createTestRun(testRun);
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<TestRun> createTestRun(@RequestBody TestRunRequest request) {
+        TestRun testRun = testRunService.createTestRun(request);
+        return ResponseEntity.ok(testRun);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TestRun> getTestRunById(@PathVariable Long id) {
-        return testRunService.getTestRunById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    // GET ONLY test_run TABLE
     @GetMapping
-    public ResponseEntity<List<TestRun>> getAllTestRuns() {
+    public ResponseEntity<List<TestRun>> getTestRuns() {
         return ResponseEntity.ok(testRunService.getAllTestRuns());
     }
 
-    // New: Report generation endpoint
+    // GET ONLY test_result TABLE
     @GetMapping("/reports")
-    public ResponseEntity<String> generateAndGetReport() {
-        String reportPath = reportService.generateReport();
-        return ResponseEntity.ok("Report generated at: " + reportPath);
+    public ResponseEntity<List<TestResult>> getTestResults() {
+        return ResponseEntity.ok(testResultService.getAllTestResults());
     }
 }
