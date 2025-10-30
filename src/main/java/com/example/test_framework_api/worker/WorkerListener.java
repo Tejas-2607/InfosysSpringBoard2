@@ -137,12 +137,14 @@
 //     }
 // }
 
+// src/main/java/com/example/test_framework_api/worker/WorkerListener.java
 package com.example.test_framework_api.worker;
 
 import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
 import com.example.test_framework_api.repository.TestRunRepository;
+import com.example.test_framework_api.service.ReportService;
 import com.example.test_framework_api.service.TestResultService;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -168,6 +170,9 @@ public class WorkerListener {
     private TestResultService testResultService;
 
     @Autowired
+    private ReportService reportService;  // Added to set reportPath
+
+    @Autowired
     private AmqpTemplate amqpTemplate;
 
     @Autowired
@@ -190,10 +195,11 @@ public class WorkerListener {
             System.out.println("Executing test for ID: " + request.getTestId());
             testExecutor.executeTest();
             testRun.setStatus("COMPLETED");
+            testRun.setReportPath(reportService.generateReport());  // Added to set reportPath
             System.out.println("Test execution succeeded for ID: " + request.getTestId());
         } catch (Exception e) {
             testRun.setStatus("FAILED");
-            System.err.println("Test failed for ID " + request.getTestId() + ": " + e.getMessage());
+            System.err.println("Test failed for ID: " + request.getTestId() + ": " + e.getMessage());
             if (isPoisonMessage(e)) {
                 routeToDLQ(request, e.getMessage());
                 throw new AmqpRejectAndDontRequeueException("Poison message routed to DLQ");
