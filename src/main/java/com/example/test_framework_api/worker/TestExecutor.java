@@ -56,7 +56,6 @@
 //     }
 // }
 
-
 package com.example.test_framework_api.worker;
 
 import com.example.test_framework_api.pageobjects.TestPage;
@@ -69,7 +68,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TestExecutor {
 
-    @Value("${app.base-url:http://localhost:8080}")
+    @Value("http://127.0.0.1:5500")
     private String baseUrl;
 
     public void executeTest() {
@@ -79,11 +78,20 @@ public class TestExecutor {
 
         try {
             TestPage page = new TestPage(driver);
-            page.open(baseUrl);          // waits for title
-            page.validateTitle();        // now passes
-            page.performAction();        // button is found
+            page.open(baseUrl); // waits for title
+            page.validateTitle(); // now passes
+            page.performAction(); // button is found
+        } catch (Exception e) {
+            System.err.println("Test execution failed: " + e.getMessage());
+            throw e;
         } finally {
-            driver.quit();
+            if (driver != null) {
+                try {
+                    driver.quit();
+                } catch (Exception quitEx) {
+                    System.err.println("Error quitting driver: " + quitEx.getMessage());
+                }
+            }
         }
     }
 }

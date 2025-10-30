@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class UnitTestExample {
 
     @Autowired
-    private TestDataService testDataService; // Now used
+    // private TestDataService testDataService; // Now used
 
     @BeforeEach
     void setUp() {
