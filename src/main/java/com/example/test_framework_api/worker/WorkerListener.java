@@ -108,7 +108,7 @@
 //     private String queueName;
 //     public void receiveMessage(TestRunRequest request) throws Exception {
 //         System.out.println("Received test run request for ID: " + request.getTestId());
-        
+
 //         // Get test run from database
 //         TestRun testRun = testRunRepository.findById(request.getTestId())
 //             .orElseThrow(() -> new RuntimeException("Test run not found: " + request.getTestId()));
@@ -130,7 +130,7 @@
 //             testRun.setStatus("FAILED");
 //             testRun.setReportPath("Error: " + e.getMessage());
 //             testRunRepository.save(testRun);
-            
+
 //             // Optionally rethrow if you want the message to be rejected
 //             throw e;
 //         }
@@ -138,89 +138,219 @@
 // }
 
 // src/main/java/com/example/test_framework_api/worker/WorkerListener.java
+// package com.example.test_framework_api.worker;
+
+// import com.example.test_framework_api.model.TestResult;
+// import com.example.test_framework_api.model.TestRun;
+// import com.example.test_framework_api.model.TestRunRequest;
+// import com.example.test_framework_api.repository.TestRunRepository;
+// import com.example.test_framework_api.service.TestResultService;
+// import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+// import org.springframework.amqp.core.AmqpTemplate;
+// import org.springframework.amqp.rabbit.core.RabbitAdmin;
+// import org.springframework.amqp.rabbit.annotation.RabbitListener;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.retry.annotation.Backoff;
+// import org.springframework.retry.annotation.Retryable;
+// import org.springframework.retry.support.RetryTemplate;
+// import org.springframework.stereotype.Component;
+
+// import java.time.LocalDateTime;
+// import java.util.Optional;
+
+// @Component
+// public class WorkerListener {
+//     private final RetryTemplate retryTemplate;
+//     @Autowired
+//     private TestExecutor testExecutor;
+
+//     @Autowired
+//     private TestRunRepository testRunRepository;
+//     @Autowired
+//     private TestResultService testResultService;
+
+//     @Autowired
+//     private AmqpTemplate amqpTemplate;
+
+//     @Autowired
+//     private RabbitAdmin rabbitAdmin;
+
+//     @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 10000))
+//     @RabbitListener(queues = "testRunQueue", containerFactory = "rabbitListenerContainerFactory")
+//     public void receiveMessage(TestRunRequest request) {
+//         retryTemplate.execute(context -> {
+//             System.out.println("Received test run request: " + request);
+//             System.out.println("Retry count: " + context.getRetryCount());
+
+//             TestRun testRun = testRunRepository.findById(request.getTestId())
+//                     .orElseThrow(() -> new RuntimeException("TestRun not found: " + request.getTestId()));
+
+//             System.out.println("Executing test for ID: " + testRun.getId());
+//             testExecutor.executeTest(); // This throws on failure
+
+//             updateTestRunStatus(testRun, TestStatus.PASSED);
+//             saveTestResult(testRun, "Click Button Test", TestStatus.PASSED, 15);
+//             return null;
+//         }, recoveryContext -> {
+//             // This runs AFTER 3 failed attempts
+//             System.out.println("MAX RETRIES EXCEEDED. Moving to DLQ.");
+//             TestRun testRun = testRunRepository.findById(request.getTestId()).orElse(null);
+//             if (testRun != null) {
+//                 updateTestRunStatus(testRun, TestStatus.FAILED);
+//                 saveTestResult(testRun, "Click Button Test", TestStatus.FAILED, 15);
+//             }
+//             return null;
+//         });
+//     }
+//     private boolean isPoisonMessage(Exception e) {
+//         return e.getMessage().contains("Invalid data");
+//     }
+
+//     private void routeToDLQ(TestRunRequest request, String errorMsg) {
+//         System.err.println("Routing poison message to DLQ: " + errorMsg);
+//         amqpTemplate.convertAndSend("testRunExchange", "dlq", request);
+//     }
+// }
+
+// @RabbitListener(queues = "testRunQueue", containerFactory = "rabbitListenerContainerFactory")
+//     public void receiveMessage(TestRunRequest request) {
+//         retryTemplate.execute(context -> {
+//             System.out.println("Received test run request: " + request);
+//             System.out.println("Retry count: " + context.getRetryCount());
+
+//             TestRun testRun = testRunRepository.findById(request.getTestId())
+//                     .orElseThrow(() -> new RuntimeException("TestRun not found: " + request.getTestId()));
+
+//             System.out.println("Executing test for ID: " + testRun.getId());
+//             testExecutor.executeTest(); // This throws on failure
+
+//             updateTestRunStatus(testRun, TestStatus.PASSED);
+//             saveTestResult(testRun, "Click Button Test", TestStatus.PASSED, 15);
+//             return null;
+//         }, recoveryContext -> {
+//             // This runs AFTER 3 failed attempts
+//             System.out.println("MAX RETRIES EXCEEDED. Moving to DLQ.");
+//             TestRun testRun = testRunRepository.findById(request.getTestId()).orElse(null);
+//             if (testRun != null) {
+//                 updateTestRunStatus(testRun, TestStatus.FAILED);
+//                 saveTestResult(testRun, "Click Button Test", TestStatus.FAILED, 15);
+//             }
+//             return null;
+//         });
+
+// @RabbitListener(queues = "testRunQueue",containerFactory = "rabbitListenerContainerFactory")  // Hardcoded to avoid placeholder issues
+//     public void receiveMessage(TestRunRequest request) throws Exception {
+//         long startTime = System.currentTimeMillis();
+//         System.out.println("Received test run request: " + request);
+//         // Basic monitoring: Log queue depth
+//         rabbitAdmin.getQueueProperties("testRunQueue").forEach((k, v) -> System.out.println("Queue " + k + ": " + v));
+//         Optional<TestRun> optionalTestRun = testRunRepository.findById(request.getTestId());
+//         if (!optionalTestRun.isPresent()) {
+//             throw new AmqpRejectAndDontRequeueException("TestRun not found");
+//         }
+
+//         TestRun testRun = optionalTestRun.get();
+//         try {
+//             System.out.println("Executing test for ID: " + request.getTestId());
+//             testExecutor.executeTest();
+//             testRun.setStatus("COMPLETED");
+//             System.out.println("Test execution succeeded for ID: " + request.getTestId());
+//         } catch (Exception e) {
+//             testRun.setStatus("FAILED");
+//             System.err.println("Test failed for ID: " + request.getTestId() + ": " + e.getMessage());
+//             if (isPoisonMessage(e)) {
+//                 routeToDLQ(request, e.getMessage());
+//                 throw new AmqpRejectAndDontRequeueException("Poison message routed to DLQ");
+//             }
+//             throw e; // Retryable
+//         } finally {
+//             long duration = System.currentTimeMillis() - startTime;
+//             testRunRepository.save(testRun);
+
+//             TestResult testResult = new TestResult();
+//             testResult.setTestName(request.getSuiteName());
+//             testResult.setStatus(testRun.getStatus());
+//             testResult.setDuration(duration);
+//             testResult.setCreatedAt(LocalDateTime.now());
+//             testResult.setTestRun(testRun);  // Set relationship
+//             testResultService.saveTestResult(testResult);
+//             System.out.println("Saved TestResult for TestRun ID: " + request.getTestId());
+//         }
+//     }
+
 package com.example.test_framework_api.worker;
 
 import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
+import com.example.test_framework_api.model.TestStatus;
 import com.example.test_framework_api.repository.TestRunRepository;
 import com.example.test_framework_api.service.TestResultService;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.core.AmqpTemplate;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
+// import com.example.test_framework_api.model.*;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+
+import static com.example.test_framework_api.config.RabbitMQConfig.QUEUE;
 
 @Component
 public class WorkerListener {
 
+    private final RetryTemplate retryTemplate;
+
     @Autowired
     private TestExecutor testExecutor;
-
     @Autowired
     private TestRunRepository testRunRepository;
     @Autowired
     private TestResultService testResultService;
 
-    @Autowired
-    private AmqpTemplate amqpTemplate;
+    public WorkerListener(RetryTemplate retryTemplate) {
+        this.retryTemplate = retryTemplate;
+    }
 
-    @Autowired
-    private RabbitAdmin rabbitAdmin;
+    @RabbitListener(queues = QUEUE, containerFactory = "rabbitListenerContainerFactory")
+    public void receiveMessage(TestRunRequest request) {
 
-    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2, maxDelay = 10000))
-    @RabbitListener(queues = "testRunQueue")  // Hardcoded to avoid placeholder issues
-    public void receiveMessage(TestRunRequest request) throws Exception {
-        long startTime = System.currentTimeMillis();
-        System.out.println("Received test run request: " + request);
-        // Basic monitoring: Log queue depth
-        rabbitAdmin.getQueueProperties("testRunQueue").forEach((k, v) -> System.out.println("Queue " + k + ": " + v));
-        Optional<TestRun> optionalTestRun = testRunRepository.findById(request.getTestId());
-        if (!optionalTestRun.isPresent()) {
-            throw new AmqpRejectAndDontRequeueException("TestRun not found");
-        }
+        retryTemplate.execute(context -> {
+            System.out.println("Attempt #" + (context.getRetryCount() + 1)
+                    + " – processing TestRun " + request.getTestId());
 
-        TestRun testRun = optionalTestRun.get();
-        try {
-            System.out.println("Executing test for ID: " + request.getTestId());
-            testExecutor.executeTest();
-            testRun.setStatus("COMPLETED");
-            System.out.println("Test execution succeeded for ID: " + request.getTestId());
-        } catch (Exception e) {
-            testRun.setStatus("FAILED");
-            System.err.println("Test failed for ID: " + request.getTestId() + ": " + e.getMessage());
-            if (isPoisonMessage(e)) {
-                routeToDLQ(request, e.getMessage());
-                throw new AmqpRejectAndDontRequeueException("Poison message routed to DLQ");
+            TestRun testRun = testRunRepository.findById(request.getTestId())
+                    .orElseThrow(() -> new RuntimeException("TestRun not found: " + request.getTestId()));
+
+            testExecutor.executeTest(); // throws on failure
+            updateTestRun(testRun, TestStatus.PASSED);
+            saveResult(testRun, TestStatus.PASSED);
+            return null;
+
+        }, recovery -> { // runs **after** max attempts
+            System.out.println("MAX RETRIES EXCEEDED – marking FAILED and sending to DLQ");
+            TestRun testRun = testRunRepository.findById(request.getTestId()).orElse(null);
+            if (testRun != null) {
+                updateTestRun(testRun, TestStatus.FAILED);
+                saveResult(testRun, TestStatus.FAILED);
             }
-            throw e; // Retryable
-        } finally {
-            long duration = System.currentTimeMillis() - startTime;
-            testRunRepository.save(testRun);
-
-            TestResult testResult = new TestResult();
-            testResult.setTestName(request.getSuiteName());
-            testResult.setStatus(testRun.getStatus());
-            testResult.setDuration(duration);
-            testResult.setCreatedAt(LocalDateTime.now());
-            testResult.setTestRun(testRun);  // Set relationship
-            testResultService.saveTestResult(testResult);
-            System.out.println("Saved TestResult for TestRun ID: " + request.getTestId());
-        }
+            return null; // let container reject → DLQ
+        });
     }
 
-    private boolean isPoisonMessage(Exception e) {
-        return e.getMessage().contains("Invalid data");
+    private void updateTestRun(TestRun tr, TestStatus status) {
+        tr.setStatus(status.name());
+        testRunRepository.save(tr);
     }
 
-    private void routeToDLQ(TestRunRequest request, String errorMsg) {
-        System.err.println("Routing poison message to DLQ: " + errorMsg);
-        amqpTemplate.convertAndSend("testRunExchange", "dlq", request);
+    private void saveResult(TestRun tr, TestStatus status) {
+        TestResult r = new TestResult();
+        r.setTestName(tr.getName());
+        r.setStatus(status.name());
+        r.setDuration(0L); // you can compute real duration
+        r.setCreatedAt(LocalDateTime.now());
+        r.setTestRun(tr);
+        testResultService.saveTestResult(r);
+        System.out.println("Saved TestResult for TestRun ID: " + tr.getId());
     }
 }
