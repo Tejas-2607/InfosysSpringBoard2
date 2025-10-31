@@ -9,9 +9,9 @@ import com.example.test_framework_api.service.TestResultService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.test_framework_api.service.ProduceReportHtmlService;
 import java.util.List;
-
+import java.util.Map;
 @RestController
 @RequestMapping("/api/runs")
 public class TestRunController {
@@ -21,6 +21,8 @@ public class TestRunController {
 
     @Autowired
     private TestResultService testResultService;
+    @Autowired
+    private ProduceReportHtmlService produceReportHtmlService;
 
     // CREATE test_run
     @PostMapping
@@ -39,5 +41,22 @@ public class TestRunController {
     @GetMapping("/reports")
     public ResponseEntity<List<TestResult>> getTestResults() {
         return ResponseEntity.ok(testResultService.getAllTestResults());
+    }
+
+    @GetMapping("/reports-producehtml")
+    public ResponseEntity<?> produceHtmlReport() {
+        try {
+            String fileName = produceReportHtmlService.generateReport();
+
+            String publicUrl = "http://localhost:8080/reports/" + fileName;
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Report generated",
+                    "file", fileName,
+                    "url", publicUrl));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }
