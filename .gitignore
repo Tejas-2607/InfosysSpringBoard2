@@ -45,10 +45,7 @@ docker-compose.yml
 Dockerfile
 
 testpage.html
-<<<<<<< HEAD
 test-framework.log
-=======
-logs
->>>>>>> 0997258182afe7b6b8840dc1536b3d862a082a3f
 
 report-template.html
+allure.properties
