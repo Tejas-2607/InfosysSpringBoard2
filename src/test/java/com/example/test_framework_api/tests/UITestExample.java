@@ -1,20 +1,28 @@
 package com.example.test_framework_api.tests;
 
+import com.example.test_framework_api.pageobjects.TestPage;
+import io.github.bonigarcia.wdm.WebDriverManager;
+import io.qameta.allure.Attachment;
+import io.qameta.allure.Step;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
-// UI tests (Pyramid top: Slow, expensive, use sparingly)
 public class UITestExample {
 
     private WebDriver driver;
+    private TestPage testPage;
 
     @BeforeEach
     void setUp() {
-        driver = new ChromeDriver(); // WebDriver basics
+        WebDriverManager.chromedriver().setup();
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        driver = new ChromeDriver(options);
+        testPage = new TestPage(driver);
     }
 
     @AfterEach
@@ -22,10 +30,17 @@ public class UITestExample {
         driver.quit();
     }
 
+    @Step("UI Test Step")
     @Test
     void uiTest() {
-        driver.get("https://www.google.com");
-        driver.findElement(By.name("q")).sendKeys("Selenium test"); // Locators: name, XPath/CSS possible
-        // POM example: Normally use Page Object class, e.g., GooglePage page = new GooglePage(driver); page.search("test");
+        testPage.validateTitle();
+        testPage.performAction();
+        attachScreenshot("After Test"); // Simulated
+    }
+
+    @Attachment(value = "Screenshot", type = "image/png")
+    public byte[] attachScreenshot(String name) {
+        // Simulate screenshot bytes
+        return new byte[0];
     }
 }

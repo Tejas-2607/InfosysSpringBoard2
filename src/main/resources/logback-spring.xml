@@ -19,4 +19,5 @@
     </root>
 
     <logger name="com.example.test_framework_api" level="DEBUG"/>
+    <logger name="org.springframework.amqp" level="INFO"/> <!-- Queue metrics -->
 </configuration>

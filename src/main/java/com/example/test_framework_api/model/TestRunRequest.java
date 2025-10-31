@@ -1,23 +1,21 @@
+// src/main/java/com/example/test_framework_api/model/TestRunRequest.java
 package com.example.test_framework_api.model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class TestRunRequest {
-    private final Long testId;
-    private final String suiteName;
+    private Long testId;
+    private String suiteName;
 
-    @JsonCreator
-    public TestRunRequest(@JsonProperty("testId") Long testId, @JsonProperty("suiteName") String suiteName) {
+    // Required constructor
+    public TestRunRequest(Long testId, String suiteName) {
         this.testId = testId;
         this.suiteName = suiteName;
     }
 
-    public Long getTestId() { return testId; }
-    public String getSuiteName() { return suiteName; }
+    public TestRunRequest() {}
 
-    @Override
-    public String toString() {
-        return "TestRunRequest{testId=" + testId + ", suiteName='" + suiteName + "'}";
-    }
+    public Long getTestId() { return testId; }
+    public void setTestId(Long testId) { this.testId = testId; }
+
+    public String getSuiteName() { return suiteName; }
+    public void setSuiteName(String suiteName) { this.suiteName = suiteName; }
 }
