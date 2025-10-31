@@ -1,35 +1,49 @@
 package com.example.test_framework_api.tests;
 
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.Assumptions;
+import com.example.test_framework_api.service.TestDataService;
+import io.qameta.allure.Step;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@SpringBootTest
+@ActiveProfiles("dev") // Multi-env
 public class UnitTestExample {
+
+    @Autowired
+    // private TestDataService testDataService; // Now used
 
     @BeforeEach
     void setUp() {
         System.out.println("Setup for test");
     }
 
-    @AfterEach
-    void tearDown() {
-        System.out.println("Teardown after test");
-    }
-
+    @Step("Basic Unit Test")
     @Test
     void basicTest() {
         assertEquals(2, 1 + 1);
     }
 
-    @ParameterizedTest
-    @CsvSource({"1,1,2", "2,3,5"}) // Data-driven (Best practice)
-    void parameterizedTest(int a, int b, int expected) {
-        Assumptions.assumeTrue(a > 0 && b > 0); // Assumptions example (skip if false)
-        System.out.println(a+" and "+b);
-        assertEquals(expected, a + b);
+    static Stream<Object[]> externalData() {
+        // In real: autowired service
+        TestDataService service = new TestDataService(); // Fallback mock
+        List<Map<String, Object>> data = service.loadTestData("src/test/resources/test-data.json");
+        return data.stream().map(d -> new Object[]{d.get("a"), d.get("b"), d.get("expected")});
     }
 
+    @ParameterizedTest
+    @MethodSource("externalData")
+    void parameterizedTest(int a, int b, int expected) {
+        assertEquals(expected, a + b);
+    }
 }

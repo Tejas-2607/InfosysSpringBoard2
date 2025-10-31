@@ -1,97 +1,131 @@
+// package com.example.test_framework_api.config;
+
+// import org.springframework.amqp.core.*;
+// import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+// import org.springframework.amqp.rabbit.core.RabbitAdmin;
+// import org.springframework.amqp.rabbit.core.RabbitTemplate;
+// import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.context.annotation.Bean;
+// import org.springframework.context.annotation.Configuration;
+// import org.springframework.context.annotation.Lazy;
+// import org.springframework.retry.annotation.EnableRetry;
+
+// @Configuration
+// @EnableRetry
+// public class RabbitMQConfig {
+//     public static final String EXCHANGE = "testRunExchange";
+//     public static final String ROUTING_KEY = "test.run";
+//     public static final String QUEUE = "testRunQueue";
+//     public static final String DLQ = "testRunDLQ"; // DLQ
+
+//     @Bean
+//     public Queue testRunQueue() {
+//         return QueueBuilder.durable(QUEUE).withArgument("x-dead-letter-exchange", EXCHANGE)
+//                 .withArgument("x-dead-letter-routing-key", "dlq").build();
+//     }
+
+//     @Bean
+//     public Queue deadLetterQueue() {
+//         return new Queue(DLQ, true); // Durable DLQ
+//     }
+
+//     @Bean
+//     public DirectExchange exchange() {
+//         return new DirectExchange(EXCHANGE);
+//     }
+
+//     @Bean
+//     public Binding binding() {
+//         return BindingBuilder.bind(testRunQueue()).to(exchange()).with(ROUTING_KEY);
+//     }
+
+//     @Bean
+//     public Binding dlqBinding() {
+//         return BindingBuilder.bind(deadLetterQueue()).to(exchange()).with("dlq");
+//     }
+
+//     @Bean
+//     public Jackson2JsonMessageConverter jsonMessageConverter() {
+//         return new Jackson2JsonMessageConverter();
+//     }
+
+//     @Bean
+//     public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+//         return new RabbitAdmin(connectionFactory);
+//     }
+
+//     @Autowired
+//     public void configureRabbitTemplate(@Lazy RabbitTemplate rabbitTemplate, ConnectionFactory connectionFactory) {
+//         rabbitTemplate.setConnectionFactory(connectionFactory);
+//         rabbitTemplate.setMessageConverter(jsonMessageConverter());
+//     }
+// }
+
 package com.example.test_framework_api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.annotation.EnableRabbit;
-import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.retry.RepublishMessageRecoverer;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.boot.autoconfigure.amqp.RabbitTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.retry.backoff.ExponentialBackOffPolicy;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.retry.annotation.EnableRetry;
 
 @Configuration
-@EnableRabbit
+@EnableRetry
 public class RabbitMQConfig {
+    public static final String EXCHANGE = "testRunExchange";
+    public static final String ROUTING_KEY = "testRunKey";
+    public static final String QUEUE = "testRunQueue";
+    public static final String DLQ = "dlq.testRunKey"; // DLQ
 
-    public static final String EXCHANGE      = "testRunExchange";
-    public static final String ROUTING_KEY   = "testRunKey";
-    public static final String DLQ_ROUTING   = "dlq.testRunKey";
-
-    /* ---------- MESSAGE CONVERTER ---------- */
     @Bean
-    public Jackson2JsonMessageConverter jsonMessageConverter(ObjectMapper objectMapper) {
-        return new Jackson2JsonMessageConverter(objectMapper);
+    public Queue testRunQueue() {
+        return QueueBuilder.durable(QUEUE).withArgument("x-dead-letter-exchange", EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "dlq.testRunKey").build();
     }
 
     @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory cf,
-                                         Jackson2JsonMessageConverter converter) {
-        RabbitTemplate t = new RabbitTemplate(cf);
-        t.setMessageConverter(converter);
-        return t;
+    public Queue deadLetterQueue() {
+        return new Queue(DLQ, true); // Durable DLQ
     }
 
-    /* ---------- LISTENER CONTAINER WITH RETRY + DLQ ---------- */
-    @Bean
-    public SimpleMessageListenerContainer listenerContainer(ConnectionFactory cf,
-                                                            RabbitTemplate template) {
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(cf);
-
-        ExponentialBackOffPolicy backOff = new ExponentialBackOffPolicy();
-        backOff.setInitialInterval(500);
-        backOff.setMultiplier(2.0);
-        backOff.setMaxInterval(10_000);
-
-        // Republish to DLQ when all retries are exhausted
-        RepublishMessageRecoverer recoverer = new RepublishMessageRecoverer(template,
-                EXCHANGE, DLQ_ROUTING);
-
-        container.setAdviceChain(
-                RetryInterceptorBuilder.stateless()
-                        .maxAttempts(3)               // 3 tries (original + 2 retries)
-                        .backOffPolicy(backOff)
-                        .recoverer(recoverer)         // <-- THIS SENDS TO DLQ
-                        .build());
-
-        return container;
-    }
-
-    /* ---------- QUEUES ---------- */
-    @Bean
-    public Queue queue() {
-        Map<String, Object> args = new HashMap<>();
-        args.put("x-dead-letter-exchange", EXCHANGE);
-        args.put("x-dead-letter-routing-key", DLQ_ROUTING);
-        // durable = true, exclusive = false, autoDelete = false
-        return new Queue("testRunQueue", true, false, false, args);
-    }
-
-    @Bean
-    public Queue dlq() {
-        return new Queue("testRunDLQ", true);
-    }
-
-    /* ---------- EXCHANGE ---------- */
     @Bean
     public TopicExchange exchange() {
         return new TopicExchange(EXCHANGE, true, false);
     }
 
-    /* ---------- BINDINGS ---------- */
     @Bean
-    public Binding binding(Queue queue, TopicExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY);
+    public Binding binding() {
+        return BindingBuilder.bind(testRunQueue()).to(exchange()).with(ROUTING_KEY);
     }
 
     @Bean
-    public Binding dlqBinding(Queue dlq, TopicExchange exchange) {
-        return BindingBuilder.bind(dlq).to(exchange).with(DLQ_ROUTING);
+    public Binding dlqBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(exchange()).with(DLQ);
     }
+
+    @Bean
+    public Jackson2JsonMessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        return new RabbitAdmin(connectionFactory);
+    }
+
+    // ...existing code...
+    // Removed autowired configureRabbitTemplate(...) to avoid circular dependency.
+    // Use RabbitTemplateCustomizer so the auto-configured RabbitTemplate is customized lazily by Spring Boot.
+    @Bean
+    public RabbitTemplateCustomizer rabbitTemplateCustomizer(Jackson2JsonMessageConverter jsonMessageConverter) {
+        return rabbitTemplate -> {
+            rabbitTemplate.setMessageConverter(jsonMessageConverter);
+            // Do not set connectionFactory here; Spring Boot will set it on the auto-configured RabbitTemplate.
+        };
+    }
+    // ...existing code...
 }
