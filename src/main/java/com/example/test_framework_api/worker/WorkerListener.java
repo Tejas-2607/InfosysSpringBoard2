@@ -314,7 +314,7 @@ public class WorkerListener {
 
     @RabbitListener(queues = QUEUE, containerFactory = "rabbitListenerContainerFactory")
     public void receiveMessage(TestRunRequest request) {
-
+        long startTime = System.currentTimeMillis();
         retryTemplate.execute(context -> {
             System.out.println("Attempt #" + (context.getRetryCount() + 1)
                     + " – processing TestRun " + request.getTestId());
@@ -323,16 +323,18 @@ public class WorkerListener {
                     .orElseThrow(() -> new RuntimeException("TestRun not found: " + request.getTestId()));
 
             testExecutor.executeTest(); // throws on failure
+            long duration = System.currentTimeMillis() - startTime;
             updateTestRun(testRun, TestStatus.PASSED);
-            saveResult(testRun, TestStatus.PASSED);
+            saveResult(testRun, TestStatus.PASSED, duration, context.getRetryCount());
             return null;
 
         }, recovery -> { // runs **after** max attempts
+            long duration = System.currentTimeMillis() - startTime;
             System.out.println("MAX RETRIES EXCEEDED – marking FAILED and sending to DLQ");
             TestRun testRun = testRunRepository.findById(request.getTestId()).orElse(null);
             if (testRun != null) {
                 updateTestRun(testRun, TestStatus.FAILED);
-                saveResult(testRun, TestStatus.FAILED);
+                saveResult(testRun, TestStatus.FAILED, duration, recovery.getRetryCount());
             }
             return null; // let container reject → DLQ
         });
@@ -343,14 +345,16 @@ public class WorkerListener {
         testRunRepository.save(tr);
     }
 
-    private void saveResult(TestRun tr, TestStatus status) {
+    private void saveResult(TestRun tr, TestStatus status, long duration, int retryCount) {
         TestResult r = new TestResult();
         r.setTestName(tr.getName());
         r.setStatus(status.name());
-        r.setDuration(0L); // you can compute real duration
+        r.setDuration(duration); // you can compute real duration
         r.setCreatedAt(LocalDateTime.now());
         r.setTestRun(tr);
+        r.setRetryCount(retryCount); // <-- flakiness metric
         testResultService.saveTestResult(r);
-        System.out.println("Saved TestResult for TestRun ID: " + tr.getId());
+        System.out.println("Saved TestResult for TestRun ID: " + tr.getId()
+                + " | Status: " + status + " | Duration: " + duration + "ms | Retries: " + retryCount);
     }
 }

@@ -32,9 +32,12 @@ public class ProduceReportHtmlService {
 
     @Autowired
     private SpringTemplateEngine templateEngine;
+    @Autowired
+    private MetricsService metricsService;
 
     /**
      * Public method used by the controller.
+     * 
      * @return the generated file name (e.g. test_report_20251030_223505.html)
      */
     public String generateReport() throws Exception {
@@ -43,6 +46,7 @@ public class ProduceReportHtmlService {
         Context ctx = new Context();
         ctx.setVariable("results", results);
         ctx.setVariable("generatedAt", LocalDateTime.now());
+        ctx.setVariable("summary", metricsService.getSummary());
 
         String html = templateEngine.process("report-template", ctx);
 
@@ -61,6 +65,6 @@ public class ProduceReportHtmlService {
             fw.write(html);
         }
 
-        return fileName;   // returned to the controller
+        return fileName; // returned to the controller
     }
 }

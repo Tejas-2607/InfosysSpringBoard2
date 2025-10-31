@@ -14,6 +14,12 @@ public class TestResult {
 
     @Column(name = "test_name")
     private String testName;
+    @Column(name = "retry_count")
+    private Integer retryCount = 0;
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
 
     private String status;
     private long duration;
@@ -26,21 +32,55 @@ public class TestResult {
     private TestRun testRun;
 
     // Getters & Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getTestName() { return testName; }
-    public void setTestName(String testName) { this.testName = testName; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getTestName() {
+        return testName;
+    }
 
-    public long getDuration() { return duration; }
-    public void setDuration(long duration) { this.duration = duration; }
+    public void setTestName(String testName) {
+        this.testName = testName;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getStatus() {
+        return status;
+    }
 
-    public TestRun getTestRun() { return testRun; }
-    public void setTestRun(TestRun testRun) { this.testRun = testRun; }
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public TestRun getTestRun() {
+        return testRun;
+    }
+
+    public void setTestRun(TestRun testRun) {
+        this.testRun = testRun;
+    }
+
+    public void setRetryCount(Integer retryCount) {
+        this.retryCount = retryCount;
+    }
 }
