@@ -38,6 +38,24 @@
 				<scope>compile</scope>
 			</dependency>
 			<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi-ooxml</artifactId> <!-- added to check .xlsx -->
+    <version>5.2.5</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>com.opencsv</groupId>
+    <artifactId>opencsv</artifactId> <!-- added to open CSV files -->
+    <version>5.9</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>  <!-- added to check json formatting -->
+    <artifactId>jackson-databind</artifactId>
+    <version>2.15.2</version>
+    <!-- <scope>test</scope> -->
+</dependency>
+			<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 	</dependency>
@@ -120,12 +138,18 @@
 			<artifactId>rest-assured</artifactId>
 			<scope>test</scope>
 	</dependency> -->
-	<dependency>
+	<!-- <dependency>
 			<groupId>com.github.tomakehurst</groupId>
 			<artifactId>wiremock-jre8</artifactId>
 			<version>2.35.0</version>
 			<scope>test</scope>
-	</dependency>
+	</dependency> -->
+	<dependency>
+    <groupId>com.github.tomakehurst</groupId>
+    <artifactId>wiremock-standalone</artifactId>
+    <version>3.0.1</version>
+    <scope>test</scope>
+</dependency>
 			<dependency>
 				<groupId>mysql</groupId>
 				<artifactId>mysql-connector-java</artifactId>

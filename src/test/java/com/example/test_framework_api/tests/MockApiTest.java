@@ -6,10 +6,12 @@ import io.restassured.RestAssured;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+// import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.hamcrest.Matchers.*; // <-- ADD THIS
+import static org.hamcrest.Matchers.equalTo;
 
 public class MockApiTest {
 
@@ -17,7 +19,7 @@ public class MockApiTest {
 
     @BeforeEach
     void setUp() {
-        wireMockServer = new WireMockServer(options().port(8089));
+        wireMockServer = new WireMockServer(wireMockConfig().port(8089));
         wireMockServer.start();
         WireMock.configureFor("localhost", 8089);
 
