@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    .field { margin-bottom: 8px; }
+    label { display:block; font-weight:600; margin-bottom:4px; }
+    input { padding:6px 8px; border:1px solid #ccc; border-radius:4px; width:220px; }
+    .error { color:#b00020; font-size:0.9em; display:none; }
+  </style>
+</head>
+<body>
+  <form id="empForm" novalidate>
+    <div class="field">
+      <label for="empIdStyled">Employee ID (E + 5 digits)</label>
+      <input id="empIdStyled" name="empIdStyled" type="text" placeholder="E12345" required pattern="[E|e]\d{5}">
+      <div class="error" id="err">Format must be E followed by 5 digits (e.g. E12345)</div>
+    </div>
+    <button type="submit">Submit</button>
+  </form>
+
+  <script>
+    const form = document.getElementById('empForm');
+    const input = document.getElementById('empIdStyled');
+    const err = document.getElementById('err');
+
+    form.addEventListener('submit', (e) => {
+      if (!input.checkValidity()) {
+        e.preventDefault();
+        err.style.display = 'block';
+        input.focus();
+      } else {
+        err.style.display = 'none';
+        // normal submit or AJAX here
+        alert('Submitted: ' + input.value);
+      }
+    });
+
+    input.addEventListener('input', () => {
+      err.style.display = input.checkValidity() ? 'none' : 'block';
+    });
+  </script>
+</body>
+</html>
