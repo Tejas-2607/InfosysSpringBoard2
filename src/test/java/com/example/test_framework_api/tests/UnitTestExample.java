@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -20,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ActiveProfiles("dev") // Multi-env
 public class UnitTestExample {
 
-    @Autowired
-    // private TestDataService testDataService; // Now used
 
     @BeforeEach
     void setUp() {

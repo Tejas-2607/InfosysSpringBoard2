@@ -69,19 +69,18 @@ public class TestRunController {
     @GetMapping("/metrics")
     public ResponseEntity<MetricsDto> getMetrics() {
         MetricsService.Summary s = metricsService.getSummary();
-        List<Object[]> rawTrend = metricsService.getTrend7Days();
-        List<double[]> trend = rawTrend.stream()
-                .map(row -> new double[] {
-                        ((java.sql.Date) row[0]).toLocalDate().atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC)
-                                * 1000,
-                        (Double) row[1]
-                })
-                .toList();
+        // List<Object[]> rawTrend = metricsService.getTrend7Days();
+        // List<double[]> trend = rawTrend.stream()
+        //         .map(row -> new double[] {
+        //                 ((java.sql.Date) row[0]).toLocalDate().atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC)
+        //                         * 1000,
+        //                 (Double) row[1]
+        //         })
+        //         .toList();
 
         MetricsDto dto = new MetricsDto(
                 s.total(), s.passed(), s.failed(),
-                s.passRate(), s.avgDurationMs(), s.stabilityLast10(),
-                trend);
+                s.passRate(), s.avgDurationMs(), s.stabilityLast10()); // ,trend
         return ResponseEntity.ok(dto);
     }
 }
