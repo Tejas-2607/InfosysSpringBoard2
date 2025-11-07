@@ -8,7 +8,7 @@ import com.example.test_framework_api.repository.TestRunRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import org.springframework.cache.annotation.Cacheable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +37,7 @@ public class TestRunService {
         return testRunRepository.findAll();
     }
 
+    @Cacheable(value = "testRuns", key = "#id")
     public TestRun getTestRunById(Long id) {
         Optional<TestRun> optionalTestRun = testRunRepository.findById(id);
         return optionalTestRun.orElse(null);

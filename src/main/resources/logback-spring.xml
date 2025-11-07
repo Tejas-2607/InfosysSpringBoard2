@@ -13,11 +13,13 @@
         </encoder>
     </appender>
 
-    <root level="INFO">
+    <root level="INFO">  <!-- Changed from DEBUG to INFO -->
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
 
-    <logger name="com.example.test_framework_api" level="DEBUG"/>
-    <logger name="org.springframework.amqp" level="INFO"/> <!-- Queue metrics -->
+    <logger name="com.example.test_framework_api" level="INFO"/>  <!-- Quiet app logs -->
+    <logger name="org.springframework.amqp" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>  <!-- Suppress SQL spam -->
+    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>  <!-- Suppress param binding -->
 </configuration>

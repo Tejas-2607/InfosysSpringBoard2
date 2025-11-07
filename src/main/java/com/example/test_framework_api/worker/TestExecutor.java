@@ -115,7 +115,10 @@ public class TestExecutor {
         try {
             driver.get(url);
             WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(elementId)));
-
+            if (!element.isDisplayed() || !element.isEnabled()) {
+                throw new IllegalStateException("Element '" + elementId
+                        + "' is not interactable (displayed/enabled). Ensure it's a button/input.");
+            }
             switch (action.toLowerCase()) {
                 case "click":
                     element.click();
@@ -125,7 +128,11 @@ public class TestExecutor {
                     break;
                 case "rightclick":
                 case "contextclick":
-                    actions.contextClick(element).perform();
+                    // For rightclick/hover, ensure it's a valid target
+                    if ("rightclick".equals(action.toLowerCase()) || "hover".equals(action.toLowerCase())) {
+                        new Actions(driver).moveToElement(element).contextClick(element).perform(); // Use moveToElement
+                                                                                                    // first
+                    }
                     break;
                 case "clear":
                     element.clear();
