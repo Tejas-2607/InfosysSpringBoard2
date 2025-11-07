@@ -1,5 +1,6 @@
 package com.example.test_framework_api.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.test_framework_api.model.TestElementRequest;
 import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestRunRequest;
-import org.springframework.http.HttpStatus;
+// import org.springframework.http.HttpStatus;
 
 /**
  * Controller for dynamic element testing.
@@ -49,13 +50,15 @@ public class TestEntityController {
     TestRun testRun = testRunService.createTestRun(trRequest);
 
     // FIXED: Null-safe payload (Map.ofNullable ignores nulls)
-    Map<String, Object> payload = Map.of(
-        "url", request.getUrl(),
-        "elementId", request.getElementId(),
-        "action", request.getAction(), // Null OK if multi
-        "actions", request.getActions(),
-        "expectedResult", request.getExpectedResult(),
-        "testRunId", testRun.getId());
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("url", request.getUrl());
+    payload.put("elementId", request.getElementId());
+    if (request.getAction() != null) {
+      payload.put("action", request.getAction()); // Single action only if present
+    }
+    payload.put("actions", request.getActions()); // Multi always included (null OK)
+    payload.put("expectedResult", request.getExpectedResult());
+    payload.put("testRunId", testRun.getId());
 
     rabbitTemplate.convertAndSend("testRunExchange", "elementTestKey", payload);
 
@@ -70,7 +73,7 @@ public class TestEntityController {
     TestRun testRun = testRunService.getTestRunById(id); // Implement this in TestRunService if not already present
 
     if (testRun == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+      return ResponseEntity.badRequest()
           .body(Map.of("error", "Test run not found for ID: " + id));
     }
 
@@ -90,7 +93,7 @@ public class TestEntityController {
     // First, check if test run exists
     TestRun testRun = testRunService.getTestRunById(id);
     if (testRun == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
+      return ResponseEntity.badRequest()
           .body(Map.of("error", "Test run not found for ID: " + id));
     }
 

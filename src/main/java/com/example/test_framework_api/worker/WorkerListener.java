@@ -287,6 +287,7 @@ import com.example.test_framework_api.model.TestStatus;
 import com.example.test_framework_api.repository.TestRunRepository;
 import com.example.test_framework_api.service.TestResultService;
 // import com.example.test_framework_api.model.*;
+import org.springframework.retry.RetryContext;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.support.RetryTemplate;
@@ -348,7 +349,8 @@ public class WorkerListener {
         String action = (String) payload.get("action");
         List<Map<String, Object>> actionsList = (List<Map<String, Object>>) payload.get("actions");
         String expectedResult = (String) payload.get("expectedResult");
-        Long testRunId = ((Number) payload.get("testRunId")).longValue();
+        Object testRunIdObj = payload.get("testRunId");
+        Long testRunId = (testRunIdObj instanceof Number) ? ((Number) testRunIdObj).longValue() : Long.valueOf(testRunIdObj.toString());  // FIXED: Safe cast for testRunId (handles Integer/Long/Object)
 
         long startTime = System.currentTimeMillis();
         try {

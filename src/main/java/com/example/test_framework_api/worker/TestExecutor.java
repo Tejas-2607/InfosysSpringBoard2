@@ -70,7 +70,10 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.By;
+import org.openqa.selenium.InvalidElementStateException;
+
 import java.time.Duration;
+import java.util.List;
 
 @Component
 public class TestExecutor {
@@ -128,7 +131,50 @@ public class TestExecutor {
                     element.clear();
                     break;
                 case "submit":
-                    element.submit();
+                    String tag = element.getTagName().toLowerCase();
+                    if ("form".equals(tag)) {
+                        // If targeting form, find and click inner submit button/input
+                        List<WebElement> submitElements = element
+                                .findElements(By.cssSelector("button[type='submit'], input[type='submit']"));
+                        if (!submitElements.isEmpty()) {
+                            submitElements.get(0).click();
+                            System.out.println("Submitted form " + elementId + " via inner submit element");
+                        } else {
+                            throw new IllegalArgumentException("No submit button/input found inside form " + elementId);
+                        }
+                    } else {
+                        // Try submit on nested element (input/button)
+                        try {
+                            if ("button".equals(tag)) {
+                                // Buttons submit better via click
+                                element.click();
+                            } else {
+                                element.submit();
+                            }
+                        } catch (InvalidElementStateException ignored) {
+                            // Fallback: Find ancestor form and submit via its inner submit element
+                            List<WebElement> ancestorForms = element.findElements(By.xpath("./ancestor::form"));
+                            if (!ancestorForms.isEmpty()) {
+                                WebElement form = ancestorForms.get(0);
+                                List<WebElement> submitElements = form
+                                        .findElements(By.cssSelector("button[type='submit'], input[type='submit']"));
+                                if (!submitElements.isEmpty()) {
+                                    submitElements.get(0).click();
+                                    System.out.println("Submitted via ancestor form's submit element for " + elementId);
+                                } else {
+                                    throw new IllegalArgumentException(
+                                            "No submit button/input found in ancestor form for " + elementId);
+                                }
+                            } else {
+                                throw new IllegalArgumentException("No form found for submit action on " + elementId
+                                        + ". Ensure it's nested in a <form> or target the form id directly.");
+                            }
+                        }
+                    }
+                    break;
+                case "type":
+                    // FIXED: Added "type" case — use expectedResult as input text
+                    element.sendKeys(expectedResult != null ? expectedResult : "default text");
                     break;
                 default:
                     throw new IllegalArgumentException("Unsupported action: " + action);
@@ -136,10 +182,14 @@ public class TestExecutor {
 
             // Verify result if provided
             if (expectedResult != null) {
-                // Wait for change (e.g., text appears)
-                wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), expectedResult));
+                if (action.toLowerCase().equals("type") || action.toLowerCase().equals("clear")) {
+                    // For type/clear, check element value
+                    wait.until(ExpectedConditions.attributeToBe(element, "value", expectedResult));
+                } else {
+                    // For others, check body text
+                    wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), expectedResult));
+                }
             }
-
             System.out.println("Dynamic test PASSED: " + action + " on " + elementId + " at " + url);
 
         } catch (Exception e) {
