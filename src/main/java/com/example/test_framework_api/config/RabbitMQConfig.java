@@ -171,10 +171,10 @@ import org.springframework.retry.support.RetryTemplate;
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String EXCHANGE       = "testRunExchange";
-    public static final String ROUTING_KEY   = "testRunKey";
-    public static final String QUEUE         = "testRunQueue";
-    public static final String DLQ           = "dlq.testRunKey";
+    public static final String EXCHANGE = "testRunExchange";
+    public static final String ROUTING_KEY = "testRunKey";
+    public static final String QUEUE = "testRunQueue";
+    public static final String DLQ = "dlq.testRunKey";
 
     /* ---------- Queues ---------- */
     @Bean
@@ -194,6 +194,16 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange exchange() {
         return new TopicExchange(EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue elementTestQueue() {
+        return QueueBuilder.durable("elementTestQueue").build();
+    }
+
+    @Bean
+    public Binding elementTestBinding() {
+        return BindingBuilder.bind(elementTestQueue()).to(exchange()).with("elementTestKey");
     }
 
     /* ---------- Bindings ---------- */
@@ -226,7 +236,7 @@ public class RabbitMQConfig {
         SimpleRabbitListenerContainerFactory f = new SimpleRabbitListenerContainerFactory();
         f.setConnectionFactory(cf);
         f.setMessageConverter(converter);
-        f.setDefaultRequeueRejected(false);   // <-- crucial
+        f.setDefaultRequeueRejected(false); // <-- crucial
         return f;
     }
 

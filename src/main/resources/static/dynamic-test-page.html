@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Dynamic Test Page</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 20px;
+      }
+      section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ccc;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+      }
+      input {
+        padding: 8px;
+        width: 200px;
+      }
+      #log {
+        background: #f0f0f0;
+        padding: 10px;
+        height: 200px;
+        overflow-y: scroll;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dynamic Test Page</h1>
+    <p>
+      Open DevTools Console for logs. Use Postman/frontend to trigger actions on
+      elements below.
+    </p>
+
+    <!-- Section 1: Click -->
+    <section>
+      <h2>Click Action</h2>
+      <button id="click-btn">Click Me!</button>
+      <p id="click-result" style="display: none">Clicked! Success.</p>
+    </section>
+
+    <!-- Section 2: Double Click -->
+    <section>
+      <h2>Double Click Action</h2>
+      <button id="double-click-btn">Double Click Me!</button>
+      <p id="double-result" style="display: none">Double Clicked! Success.</p>
+    </section>
+
+    <!-- Section 3: Right Click/Context Menu -->
+    <section>
+      <h2>Right Click Action</h2>
+      <button id="right-click-btn">Right Click Me!</button>
+      <p id="right-result" style="display: none">Right Clicked! Success.</p>
+    </section>
+
+    <!-- Section 4: Clear Input -->
+    <section>
+      <h2>Clear Action</h2>
+      <input type="text" id="clear-input" value="Type something here..." />
+      <p id="clear-result" style="display: none">Input Cleared! Success.</p>
+    </section>
+
+    <!-- Section 5: Submit Form -->
+    <section>
+      <h2>Submit Action</h2>
+      <form id="submit-form">
+        <input type="text" name="username" placeholder="Username" />
+        <input type="email" name="email" placeholder="Email" />
+        <button type="submit">Submit Form</button>
+      </form>
+      <p id="submit-result" style="display: none">Form Submitted! Success.</p>
+    </section>
+
+    <div id="log">Console ready...</div>
+
+    <script>
+      // Click
+      document.getElementById("click-btn").addEventListener("click", () => {
+        console.log("Click action triggered");
+        document.getElementById("click-result").style.display = "block";
+      });
+
+      // Double Click
+      document
+        .getElementById("double-click-btn")
+        .addEventListener("dblclick", () => {
+          console.log("Double click action triggered");
+          document.getElementById("double-result").style.display = "block";
+        });
+
+      // Right Click
+      document
+        .getElementById("right-click-btn")
+        .addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          console.log("Right click action triggered");
+          document.getElementById("right-result").style.display = "block";
+        });
+
+      // Clear
+      document.getElementById("clear-input").addEventListener("focus", () => {
+        console.log("Clear action triggered");
+        document.getElementById("clear-input").value = "";
+        document.getElementById("clear-result").style.display = "block";
+      });
+
+      // Submit
+      document.getElementById("submit-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        console.log("Submit action triggered");
+        document.getElementById("submit-result").style.display = "block";
+      });
+
+      // Log to div
+      console.log = (...args) => {
+        document.getElementById("log").innerHTML += args.join(" ") + "<br>";
+        document.getElementById("log").scrollTop =
+          document.getElementById("log").scrollHeight;
+      };
+    </script>
+  </body>
+</html>

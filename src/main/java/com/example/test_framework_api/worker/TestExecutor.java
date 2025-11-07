@@ -64,6 +64,13 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+// import org.openqa.selenium.*;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.By;
+import java.time.Duration;
 
 @Component
 public class TestExecutor {
@@ -92,6 +99,54 @@ public class TestExecutor {
                     System.err.println("Error quitting driver: " + quitEx.getMessage());
                 }
             }
+        }
+    }
+
+    public void executeDynamicTest(String url, String elementId, String action, String expectedResult) {
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        WebDriver driver = new ChromeDriver(options);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        Actions actions = new Actions(driver);
+
+        try {
+            driver.get(url);
+            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(elementId)));
+
+            switch (action.toLowerCase()) {
+                case "click":
+                    element.click();
+                    break;
+                case "doubleclick":
+                    actions.doubleClick(element).perform();
+                    break;
+                case "rightclick":
+                case "contextclick":
+                    actions.contextClick(element).perform();
+                    break;
+                case "clear":
+                    element.clear();
+                    break;
+                case "submit":
+                    element.submit();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported action: " + action);
+            }
+
+            // Verify result if provided
+            if (expectedResult != null) {
+                // Wait for change (e.g., text appears)
+                wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), expectedResult));
+            }
+
+            System.out.println("Dynamic test PASSED: " + action + " on " + elementId + " at " + url);
+
+        } catch (Exception e) {
+            System.err.println("Dynamic test FAILED: " + e.getMessage());
+            throw e;
+        } finally {
+            driver.quit();
         }
     }
 }

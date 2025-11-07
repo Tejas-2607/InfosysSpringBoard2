@@ -293,7 +293,8 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-
+import java.util.Map;
+import java.util.List;
 import static com.example.test_framework_api.config.RabbitMQConfig.QUEUE;
 
 @Component
@@ -338,6 +339,49 @@ public class WorkerListener {
             }
             return null; // let container reject → DLQ
         });
+    }
+
+    @RabbitListener(queues = "elementTestQueue", containerFactory = "rabbitListenerContainerFactory")
+    public void handleElementTest(Map<String, Object> payload) {
+        String url = (String) payload.get("url");
+        String elementId = (String) payload.get("elementId");
+        String action = (String) payload.get("action");
+        List<Map<String, Object>> actionsList = (List<Map<String, Object>>) payload.get("actions");
+        String expectedResult = (String) payload.get("expectedResult");
+        Long testRunId = ((Number) payload.get("testRunId")).longValue();
+
+        long startTime = System.currentTimeMillis();
+        try {
+            if (actionsList != null && !actionsList.isEmpty()) {
+                // Multi-actions: Execute sequentially
+                for (Map<String, Object> step : actionsList) {
+                    String stepAction = (String) step.get("type");
+                    String value = (String) step.get("value");
+                    testExecutor.executeDynamicTest(url, elementId, stepAction, value);
+                }
+            } else if (action != null) {
+                // Single action (backward compatible)
+                testExecutor.executeDynamicTest(url, elementId, action, expectedResult);
+            } else {
+                throw new IllegalArgumentException("No action provided");
+            }
+
+            // Success
+            TestRun testRun = testRunRepository.findById(testRunId).orElse(null);
+            if (testRun != null) {
+                updateTestRun(testRun, TestStatus.PASSED);
+                saveResult(testRun, TestStatus.PASSED, System.currentTimeMillis() - startTime, 0);
+            }
+        } catch (Exception e) {
+            // Failure
+            long duration = System.currentTimeMillis() - startTime;
+            TestRun testRun = testRunRepository.findById(testRunId).orElse(null);
+            if (testRun != null) {
+                updateTestRun(testRun, TestStatus.FAILED);
+                saveResult(testRun, TestStatus.FAILED, duration, 1);
+            }
+            System.err.println("Dynamic test FAILED: " + e.getMessage());
+        }
     }
 
     private void updateTestRun(TestRun tr, TestStatus status) {

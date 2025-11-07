@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <title>Test Element Tab</title>
+    <style>
+      form {
+        max-width: 400px;
+        margin: 20px auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+      }
+      label {
+        display: block;
+        margin: 10px 0 5px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>Test Element Tab</h1>
+      <form action="/test-element" method="post">
+        <!-- Updated to match new root -->
+        <label for="url">Website URL:</label>
+        <input
+          type="url"
+          id="url"
+          name="url"
+          required
+          placeholder="e.g., http://127.0.0.1:5500/testpage.html"
+        />
+
+        <label for="elementId">Element ID:</label>
+        <input
+          type="text"
+          id="elementId"
+          name="elementId"
+          required
+          placeholder="e.g., test-button"
+        />
+
+        <label for="action">Trigger Action:</label>
+        <select id="action" name="action" required>
+          <option value="">Select Action</option>
+          <option value="click">Click</option>
+          <option value="type">Type Text</option>
+          <option value="hover">Hover</option>
+        </select>
+
+        <label for="expectedResult">Expected Result (optional):</label>
+        <input
+          type="text"
+          id="expectedResult"
+          name="expectedResult"
+          placeholder="e.g., alert text or page change"
+        />
+
+        <button type="submit">Run Test</button>
+      </form>
+
+      <div
+        id="response"
+        style="
+          margin-top: 20px;
+          padding: 10px;
+          border: 1px solid #ccc;
+          display: none;
+        "
+      ></div>
+      <!-- For JS response -->
+    </div>
+
+    <script>
+      document.querySelector("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+          const response = await fetch("/test-element", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          document.getElementById(
+            "response"
+          ).innerHTML = `<p>${result.message} (ID: ${result.testRunId})</p>`;
+          document.getElementById("response").style.display = "block";
+          if (response.ok) {
+            document.getElementById("response").style.color = "green";
+          } else {
+            document.getElementById("response").style.color = "red";
+          }
+        } catch (err) {
+          document.getElementById(
+            "response"
+          ).innerHTML = `<p>Error: ${err.message}</p>`;
+          document.getElementById("response").style.color = "red";
+          document.getElementById("response").style.display = "block";
+        }
+      });
+    </script>
+  </body>
+</html>
