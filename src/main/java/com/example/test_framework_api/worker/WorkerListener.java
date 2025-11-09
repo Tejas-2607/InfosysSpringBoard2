@@ -490,11 +490,13 @@ public class WorkerListener {
                 for (Map<String, Object> step : actionsList) {
                     String stepAction = (String) step.get("type");
                     String value = (String) step.get("value");
-                    testExecutor.executeDynamicTest(url, elementId, stepAction, value);
+                    testExecutor.executeDynamicTest(url, elementId, stepAction, expectedResult,
+                            value != null ? value : ""); // FIXED: Pass inputValue (value or "")
                 }
             } else if (action != null) {
                 // Single action (backward compatible)
-                testExecutor.executeDynamicTest(url, elementId, action, expectedResult);
+                testExecutor.executeDynamicTest(url, elementId, action, expectedResult, ""); // FIXED: Pass empty
+                                                                                             // inputValue
             } else {
                 throw new IllegalArgumentException("No action provided");
             }

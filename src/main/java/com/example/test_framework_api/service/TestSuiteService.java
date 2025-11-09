@@ -25,39 +25,64 @@ public class TestSuiteService {
     // NEW FEATURE: Import CSV to create TestSuite with TestCases
     public TestSuite importFromCsv(MultipartFile file, String suiteName, String description)
             throws IOException, CsvValidationException {
+        if (file.isEmpty())
+            throw new IllegalArgumentException("CSV file is empty");
         TestSuite suite = new TestSuite();
         suite.setName(suiteName);
         suite.setDescription(description);
         suite = suiteRepository.save(suite);
         // if (row.length != 12) {
-        //     throw new IllegalArgumentException(
-        //             "Row " + (cases.size() + 1) + " has " + row.length + " columns; expected 12.");
+        // throw new IllegalArgumentException(
+        // "Row " + (cases.size() + 1) + " has " + row.length + " columns; expected
+        // 12.");
         // }
         List<TestCase> cases = new ArrayList<>();
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-            reader.readNext(); // Skip header row
+            String[] headers = reader.readNext(); // Skip header
+            if (headers == null || headers.length < 12)
+                throw new IllegalArgumentException("Invalid header: Expected 12+ columns");
             String[] row;
+            int rowNum = 1;
             while ((row = reader.readNext()) != null) {
+                rowNum++;
+                if (row.length < 12)
+                    throw new IllegalArgumentException(
+                            "Row " + rowNum + " has " + row.length + " columns; expected 12+"); // FIXED: Validation
                 TestCase tc = new TestCase();
                 tc.setTestCaseId(row[0]); // TestCaseID
                 tc.setTestName(row[1]); // TestName
                 tc.setTestType(row[2]); // TestType
                 tc.setUrlEndpoint(row[3]); // URL/Endpoint
-                tc.setHttpMethodAction(row[4]); // HTTP Method/Action
-                tc.setLocatorType(row[5]); // LocatorType
-                tc.setLocatorValue(row[6]);// LocatorValue
-                tc.setInputData(row[7]); // InputData
-                tc.setExpectedResult(row[8]); // ExpectedResult
-                tc.setPriority(row[9]); // Priority
-                tc.setRun(Boolean.parseBoolean(row[10])); // Run
-                tc.setDescription(row[11]);// Description
+                // FIXED: Handle combined "click/id" - split if contains "/"
+                String actionLocator = row[4]; // HTTP Method / Action
+                if (actionLocator.contains("/")) {
+                    String[] parts = actionLocator.split("/", 2);
+                    tc.setHttpMethodAction(parts[0].trim()); // e.g., "click"
+                    tc.setLocatorType(parts[1].trim()); // e.g., "id"
+                } else {
+                    tc.setHttpMethodAction(actionLocator);
+                }
+                tc.setLocatorType(row.length > 5 ? row[5] : ""); // LocatorType
+                tc.setLocatorValue(row.length > 6 ? row[6] : ""); // LocatorValue
+                tc.setInputData(row.length > 7 ? row[7] : ""); // InputData
+                tc.setExpectedResult(row.length > 8 ? row[8] : ""); // ExpectedResult
+                tc.setPriority(row.length > 9 ? row[9] : ""); // Priority
+                // FIXED: Flexible Run parsing for "Yes"/"YES"/"true"
+                String runStr = row.length > 10 ? row[10] : "false";
+                tc.setRun("YES".equalsIgnoreCase(runStr) || "Yes".equalsIgnoreCase(runStr)
+                        || Boolean.parseBoolean(runStr));
+                tc.setDescription(row.length > 11 ? row[11] : ""); // Description
+                // NEW FEATURE: Multi-Action - If extra column (13+), set actionsJson
+                if (row.length > 12)
+                    tc.setActionsJson(row[12]);
                 tc.setTestSuite(suite); // Link to suite
                 cases.add(tc);
             }
         }
         caseRepository.saveAll(cases);
         suite.setTestCases(cases);
-        return suiteRepository.save(suite); // Update with bidirectional link
+        suiteRepository.save(suite);
+        return suite; // Update with bidirectional link
     }
 
     public List<TestSuite> getAllSuites() {
@@ -66,5 +91,13 @@ public class TestSuiteService {
 
     public TestSuite getSuiteById(Long id) {
         return suiteRepository.findById(id).orElse(null);
+    }
+
+    public void updateSuiteStatus(Long suiteId) {
+        TestSuite suite = getSuiteById(suiteId);
+        if (suite != null) {
+            suite.updateStatusFromResults();
+            suiteRepository.save(suite);
+        }
     }
 }

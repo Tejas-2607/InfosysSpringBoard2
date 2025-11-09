@@ -15,7 +15,7 @@ public class TestRun {
     private Long id;
 
     private String name; // FIXED: Use for suiteName (setName(suiteName))
-
+    private String reportPath;
     @Enumerated(EnumType.STRING) // FIXED: Store as String in DB, but use enum
     @Column(nullable = false)
     private TestStatus status = TestStatus.PENDING; // FIXED: Enum, not String

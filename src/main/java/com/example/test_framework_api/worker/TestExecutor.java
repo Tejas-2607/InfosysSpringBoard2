@@ -79,7 +79,8 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.InvalidElementStateException;
 import io.restassured.RestAssured;
 import lombok.RequiredArgsConstructor;
-
+import com.fasterxml.jackson.databind.JsonNode;
+// import com.fasterxml.jackson.databind.ObjectMapper;
 import static io.restassured.RestAssured.given;
 
 import java.time.Duration;
@@ -282,10 +283,15 @@ public class TestExecutor {
 
     private final TestResultService testResultService;
 
-    @Value("http://127.0.0.1:5500")
+    @Value("${app.base-url:http://127.0.0.1:5500}")
     private String baseUrl;
 
+    /**
+     * Executes a static test (e.g., fixed page interactions).
+     * This is for legacy/single-run tests; not used in suite execution.
+     */
     public void executeTest() {
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new", "--disable-gpu", "--no-sandbox", "--window-size=1920,1080");
         WebDriver driver = new ChromeDriver(options);
@@ -310,6 +316,19 @@ public class TestExecutor {
     }
 
     public void executeDynamicTest(String url, String elementId, String action, String expectedResult) {
+        executeDynamicTest(url, elementId, action, expectedResult, ""); // FIXED: Default inputValue
+    }
+
+    /**
+     * Executes dynamic UI test for a single action (used in multi-action loops or
+     * standalone).
+     * Supports click, type, submit, etc., with waits and fallbacks.
+     * FIXED: Removed undefined 'value'—use expectedResult; added optional
+     * inputValue param.
+     */
+    public void executeDynamicTest(String url, String elementId, String action, String expectedResult,
+            String inputValue) { // FIXED: Added inputValue param
+        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         WebDriver driver = new ChromeDriver(options);
@@ -318,7 +337,8 @@ public class TestExecutor {
 
         try {
             driver.get(url);
-            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(By.id(elementId)));
+            By locator = By.id(elementId); // FIXED: Simple ID; extend with getLocator if needed
+            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
             if (!element.isDisplayed() || !element.isEnabled()) {
                 throw new IllegalStateException("Element '" + elementId
                         + "' is not interactable (displayed/enabled). Ensure it's a button/input.");
@@ -332,10 +352,8 @@ public class TestExecutor {
                     break;
                 case "rightclick":
                 case "contextclick":
-                    // For rightclick/hover, ensure it's a valid target
                     if ("rightclick".equals(action.toLowerCase()) || "hover".equals(action.toLowerCase())) {
-                        new Actions(driver).moveToElement(element).contextClick(element).perform(); // Use moveToElement
-                                                                                                    // first
+                        new Actions(driver).moveToElement(element).contextClick(element).perform();
                     }
                     break;
                 case "clear":
@@ -344,7 +362,6 @@ public class TestExecutor {
                 case "submit":
                     String tag = element.getTagName().toLowerCase();
                     if ("form".equals(tag)) {
-                        // If targeting form, find and click inner submit button/input
                         List<WebElement> submitElements = element
                                 .findElements(By.cssSelector("button[type='submit'], input[type='submit']"));
                         if (!submitElements.isEmpty()) {
@@ -354,16 +371,13 @@ public class TestExecutor {
                             throw new IllegalArgumentException("No submit button/input found inside form " + elementId);
                         }
                     } else {
-                        // Try submit on nested element (input/button)
                         try {
                             if ("button".equals(tag)) {
-                                // Buttons submit better via click
                                 element.click();
                             } else {
                                 element.submit();
                             }
                         } catch (InvalidElementStateException ignored) {
-                            // Fallback: Find ancestor form and submit via its inner submit element
                             List<WebElement> ancestorForms = element.findElements(By.xpath("./ancestor::form"));
                             if (!ancestorForms.isEmpty()) {
                                 WebElement form = ancestorForms.get(0);
@@ -384,8 +398,11 @@ public class TestExecutor {
                     }
                     break;
                 case "type":
-                    // FIXED: Added "type" case — use expectedResult as input text
-                    element.sendKeys(expectedResult != null ? expectedResult : "default text");
+                case "sendkeys":
+                    // FIXED: Use expectedResult or inputValue; no 'value' var
+                    String textToSend = (expectedResult != null ? expectedResult
+                            : (inputValue != null ? inputValue : "default text"));
+                    element.sendKeys(textToSend);
                     break;
                 default:
                     throw new IllegalArgumentException("Unsupported action: " + action);
@@ -394,10 +411,8 @@ public class TestExecutor {
             // Verify result if provided
             if (expectedResult != null) {
                 if (action.toLowerCase().equals("type") || action.toLowerCase().equals("clear")) {
-                    // For type/clear, check element value
                     wait.until(ExpectedConditions.attributeToBe(element, "value", expectedResult));
                 } else {
-                    // For others, check body text
                     wait.until(ExpectedConditions.textToBePresentInElementLocated(By.tagName("body"), expectedResult));
                 }
             }
@@ -407,10 +422,19 @@ public class TestExecutor {
             System.err.println("Dynamic test FAILED: " + e.getMessage());
             throw e;
         } finally {
-            driver.quit();
+            if (driver != null) {
+                driver.quit();
+            }
         }
     }
 
+    /**
+     * Core method for executing a TestCase from suite (single or multi-action).
+     * Merges: Basic UI/API from first snippet; dynamic switch from second;
+     * multi-action loop from third.
+     * Calls executeDynamicTest for UI actions (with inputValue); RestAssured for
+     * API.
+     */
     public void executeTestCase(TestCase tc, TestRun run) {
         TestResult result = new TestResult();
         result.setTestName(tc.getTestName());
@@ -418,48 +442,99 @@ public class TestExecutor {
         long start = System.currentTimeMillis();
 
         try {
+            JsonNode actions = tc.getActions(); // Parse multi-actions (third snippet)
+            boolean isMulti = actions != null && actions.isArray() && actions.size() > 0;
+
             if ("UI".equals(tc.getTestType())) {
-                // UI Execution with Selenium
-                WebDriverManager.chromedriver().setup(); // FIXED: Added WebDriverManager setup
-                WebDriver driver = new ChromeDriver(); // Assume setup via WebDriverManager
-                driver.get(tc.getUrlEndpoint());
-                By locator = getLocator(tc.getLocatorType(), tc.getLocatorValue());
-                WebElement element = driver.findElement(locator);
+                WebDriverManager.chromedriver().setup();
+                WebDriver driver = new ChromeDriver();
+                try {
+                    driver.get(tc.getUrlEndpoint());
 
-                String action = tc.getHttpMethodAction();
-                if ("click".equals(action)) {
-                    element.click();
-                } else if ("type".equals(action) || "sendKeys".equals(action)) {
-                    element.sendKeys(tc.getInputData());
-                } // Add more: clear, hover, etc.
+                    if (isMulti) {
+                        // Multi-Action: Loop (third snippet)
+                        for (JsonNode actionNode : actions) {
+                            String type = actionNode.get("type").asText();
+                            String value = actionNode.has("value") ? actionNode.get("value").asText()
+                                    : tc.getInputData();
+                            executeDynamicTest(tc.getUrlEndpoint(), tc.getLocatorValue(), type, tc.getExpectedResult(),
+                                    value); // FIXED: Pass inputValue
+                        }
+                    } else {
+                        // Single action (first snippet)
+                        By locator = getLocator(tc.getLocatorType(), tc.getLocatorValue());
+                        WebElement element = driver.findElement(locator);
+                        String action = tc.getHttpMethodAction();
+                        if ("click".equals(action)) {
+                            element.click();
+                        } else if ("type".equals(action) || "sendKeys".equals(action)) {
+                            element.sendKeys(tc.getInputData());
+                        } else {
+                            // Fallback to dynamic (second snippet)
+                            executeDynamicTest(tc.getUrlEndpoint(), tc.getLocatorValue(), action,
+                                    tc.getExpectedResult(), tc.getInputData());
+                        }
+                    }
 
-                // Verify expected
-                String actual = driver.getPageSource().contains(tc.getExpectedResult()) ? "Match" : "No Match";
-                result.setStatus("Match".equals(actual) ? TestStatus.PASSED : TestStatus.FAILED); // FIXED: Direct enum
-                driver.quit();
+                    // Verify (first/second/third merge: pageSource + element text)
+                    String pageText = driver.getPageSource();
+                    String bodyText = driver.findElement(By.tagName("body")).getText();
+                    String actual = (pageText.contains(tc.getExpectedResult())
+                            || bodyText.contains(tc.getExpectedResult())) ? "Match" : "No Match";
+                    result.setStatus("Match".equals(actual) ? TestStatus.PASSED : TestStatus.FAILED);
+                } finally {
+                    driver.quit();
+                }
             } else if ("API".equals(tc.getTestType())) {
-                // API Execution with RestAssured
                 RestAssured.baseURI = tc.getUrlEndpoint();
                 String method = tc.getHttpMethodAction().toUpperCase();
-                if ("GET".equals(method)) {
-                    given().when().get().then().statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
-                } else if ("POST".equals(method)) {
-                    given().body(tc.getInputData()).when().post().then()
-                            .statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
+                if (isMulti) {
+                    // Multi for API: Sequential (third snippet)
+                    for (JsonNode actionNode : actions) {
+                        String apiMethod = actionNode.get("type").asText().toUpperCase();
+                        String body = actionNode.has("value") ? actionNode.get("value").asText() : tc.getInputData();
+                        executeApiCall(apiMethod, body, tc.getExpectedResult());
+                    }
+                } else {
+                    // Single (first snippet)
+                    if ("GET".equals(method)) {
+                        given().when().get().then().statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
+                    } else if ("POST".equals(method)) {
+                        given().body(tc.getInputData()).when().post().then()
+                                .statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
+                    }
                 }
-                result.setStatus(TestStatus.PASSED); // FIXED: Enum
+                result.setStatus(TestStatus.PASSED); // Assume success
             }
         } catch (Exception e) {
-            result.setStatus(TestStatus.FAILED); // FIXED: Enum
-            result.setErrorMessage(e.getMessage()); // NEW FEATURE: Capture errors
+            result.setStatus(TestStatus.FAILED);
+            result.setErrorMessage(e.getMessage());
         }
 
         result.setDuration(System.currentTimeMillis() - start);
-        testResultService.saveTestResult(result); // Save result
+        testResultService.saveTestResult(result);
     }
 
-    private By getLocator(String type, String value) { // NEW FEATURE: Dynamic locator
-        return switch (type) {
+    /**
+     * Helper for single API call (used in multi).
+     * FIXED: Added expectedResult param for status check.
+     */
+    private void executeApiCall(String method, String body, String expectedResult) {
+        int expectedCode = Integer.parseInt(expectedResult.split(" ")[0]);
+        switch (method) {
+            case "GET" -> given().when().get().then().statusCode(expectedCode);
+            case "POST" -> given().body(body).when().post().then().statusCode(expectedCode);
+            default -> throw new IllegalArgumentException("Unsupported API method: " + method);
+        }
+    }
+
+    /**
+     * Dynamic locator factory (first snippet).
+     */
+    private By getLocator(String type, String value) {
+        if (type == null || value == null)
+            return By.id("default");
+        return switch (type.toLowerCase()) {
             case "id" -> By.id(value);
             case "name" -> By.name(value);
             case "xpath" -> By.xpath(value);

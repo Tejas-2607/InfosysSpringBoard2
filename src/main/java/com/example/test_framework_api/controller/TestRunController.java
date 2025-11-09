@@ -33,6 +33,7 @@ public class TestRunController {
     private ProduceReportHtmlService produceReportHtmlService;
     @Autowired
     private MetricsService metricsService;
+    
 
     // CREATE test_run
     @PostMapping
@@ -87,6 +88,15 @@ public class TestRunController {
                 s.total(), s.passed(), s.failed(),
                 s.passRate(), s.avgDurationMs(), s.stabilityLast10()); // ,trend
         return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/report")
+    public ResponseEntity<String> produceHtmlReport(@PathVariable Long id) {
+        TestRun run = testRunService.getTestRunById(id);
+        if (run == null)
+            return ResponseEntity.notFound().build();
+        String reportPath = produceReportHtmlService.generateReport(run.getId()); // FIXED: Pass arg
+        return ResponseEntity.ok(reportPath);
     }
 
     // @PostMapping("/test-element")

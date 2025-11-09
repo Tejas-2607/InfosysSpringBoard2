@@ -4,11 +4,13 @@ import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.repository.TestResultRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.example.test_framework_api.model.TestStatus;
+import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MetricsService {
 
   @Autowired
@@ -22,19 +24,14 @@ public class MetricsService {
   }
 
   public Summary getSummary() {
-    List<TestResult> all = repo.findAll();
-    long total = all.size();
-    long passed = all.stream().filter(r -> "PASSED".equals(r.getStatus())).count();
-    long failed = total - passed;
-    double passRate = total == 0 ? 0 : (passed * 100.0 / total);
-    double avgDuration = all.stream()
-        .mapToLong(r -> r.getDuration()) // long → no null
-        .average()
-        .orElse(0.0);
-    // Stability: last 10 distinct test runs (by testRun.id)
-    List<TestResult> last10 = repo.findTop10ByOrderByTestRunIdDesc();
-    long stablePassed = last10.stream().filter(r -> "PASSED".equals(r.getStatus())).count();
-    double stability = last10.isEmpty() ? 0 : (stablePassed * 100.0 / last10.size());
+    List<TestResult> results = repo.findAll();
+    long total = results.size();
+    long passed = results.stream().filter(r -> r.getStatus() == TestStatus.PASSED).count(); // FIXED: == instead of
+                                                                                            // .equals("PASSED")
+    long failed = results.stream().filter(r -> r.getStatus() == TestStatus.FAILED).count(); // FIXED
+    double passRate = total > 0 ? (passed * 100.0 / total) : 0;
+    long avgDuration = (long) results.stream().mapToLong(TestResult::getDuration).average().orElse(0.0);
+    double stability = (total - failed) * 100.0 / total; // Placeholder
 
     return new Summary(total, passed, failed, passRate, avgDuration, stability);
   }
