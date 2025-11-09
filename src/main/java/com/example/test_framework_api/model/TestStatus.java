@@ -1,9 +1,19 @@
-// src/main/java/com/example/test_framework_api/model/TestStatus.java
 package com.example.test_framework_api.model;
 
 public enum TestStatus {
-    PENDING,
-    IN_PROGRESS,
-    PASSED,
-    FAILED
+    PENDING("PENDING"),
+    RUNNING("RUNNING"), // FIXED: Added missing
+    COMPLETED("COMPLETED"), // FIXED: Added missing
+    FAILED("FAILED"),
+    PASSED("PASSED");
+
+    private final String value;
+
+    TestStatus(String value) {
+        this.value = value;
+    }
+
+    public String getValue() {
+        return value;
+    }
 }

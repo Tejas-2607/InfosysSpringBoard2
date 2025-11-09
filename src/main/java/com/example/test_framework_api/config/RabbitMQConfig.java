@@ -175,6 +175,8 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY = "testRunKey";
     public static final String QUEUE = "testRunQueue";
     public static final String DLQ = "dlq.testRunKey";
+    public static final String TEST_SUITE_QUEUE = "testSuiteQueue"; // NEW FEATURE: Constant
+    public static final String TEST_SUITE_KEY = "testSuiteKey";
 
     /* ---------- Queues ---------- */
     @Bean
@@ -188,6 +190,16 @@ public class RabbitMQConfig {
     @Bean
     public Queue deadLetterQueue() {
         return QueueBuilder.durable(DLQ).build();
+    }
+
+    @Bean
+    public TopicExchange deadLetterExchange() { // FIXED: Define missing bean
+        return new TopicExchange("dlx.exchange");
+    }
+
+    @Bean
+    public TopicExchange testExchange() { // FIXED: Define missing bean (reuse or new)
+        return new TopicExchange("test.exchange"); // Or reuse existing EXCHANGE
     }
 
     /* ---------- Exchange ---------- */
@@ -256,5 +268,16 @@ public class RabbitMQConfig {
         rt.setRetryPolicy(policy);
 
         return rt;
+    }
+
+    @Bean
+    public Queue testSuiteQueue() { // NEW FEATURE: Queue for suite execution
+        return QueueBuilder.durable("testSuiteQueue")
+                .withArgument("x-dead-letter-exchange", deadLetterExchange().getName()).build();
+    }
+
+    @Bean
+    public Binding testSuiteBinding() { // NEW FEATURE: Binding for suite requests
+        return BindingBuilder.bind(testSuiteQueue()).to(testExchange()).with("testSuiteKey");
     }
 }

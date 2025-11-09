@@ -129,6 +129,18 @@
 				<optional>true</optional>
 			</dependency>
 			<dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.9</version>
+            <!-- FIXED: Moved to compile scope for CSV import -->
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>5.4.0</version>
+            <!-- FIXED: Ensure compile scope for API execution -->
+        </dependency>
+			<dependency>
 					<groupId>org.seleniumhq.selenium</groupId>
 					<artifactId>selenium-java</artifactId>
 					<version>4.23.0</version> <!-- Use the latest stable version -->
@@ -181,6 +193,7 @@
 							<exclude>
 								<groupId>org.projectlombok</groupId>
 								<artifactId>lombok</artifactId>
+								<optional>true</optional>
 							</exclude>
 						</excludes>
 					</configuration>
