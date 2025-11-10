@@ -18,4 +18,7 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
 
   @Query("SELECT r FROM TestResult r ORDER BY r.testRun.id DESC")
   List<TestResult> findTop10ByOrderByTestRunIdDesc();
+
+  @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId")
+    List<TestResult> findByTestRunId(Long testRunId);
 }

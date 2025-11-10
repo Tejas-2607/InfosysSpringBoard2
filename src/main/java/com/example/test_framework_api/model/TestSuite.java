@@ -1,5 +1,7 @@
 package com.example.test_framework_api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -8,6 +10,7 @@ import java.util.List;
 @Entity
 @Table(name = "test_suite")
 @Data // Lombok: Generates getters/setters/toString/equals/hashCode
+@JsonIgnoreProperties(value = { "testCases" }, allowSetters = true) // FIXED: Ignore cycle in JSON
 public class TestSuite {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,8 +22,9 @@ public class TestSuite {
     private String description;
 
     @OneToMany(mappedBy = "testSuite", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference // FIXED: Serializes testCases without back-ref cycle
     private List<TestCase> testCases;
-
+    
     @ManyToOne
     @JoinColumn(name = "test_run_id")
     private TestRun testRun; // NEW FEATURE: Links suite to a TestRun for execution context

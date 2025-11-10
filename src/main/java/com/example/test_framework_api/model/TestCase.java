@@ -1,5 +1,7 @@
 package com.example.test_framework_api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -7,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Entity
 @Table(name = "test_case")
 @Data
+@JsonIgnoreProperties(value = { "testSuite" }, allowSetters = true) // FIXED: Ignore cycle in JSON
 public class TestCase {
     @Id
     private String testCaseId; // CSV: TestCaseID (e.g., TC_UI01)
@@ -46,6 +49,7 @@ public class TestCase {
 
     @ManyToOne
     @JoinColumn(name = "test_suite_id")
+    @JsonBackReference // FIXED: Ignores back-ref to suite (breaks cycle)
     private TestSuite testSuite; // NEW FEATURE: Belongs to suite
 
     public JsonNode getActions() {

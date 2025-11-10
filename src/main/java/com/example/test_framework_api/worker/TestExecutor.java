@@ -82,7 +82,8 @@ import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.JsonNode;
 // import com.fasterxml.jackson.databind.ObjectMapper;
 import static io.restassured.RestAssured.given;
-
+import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import java.time.Duration;
 import java.util.List;
 
@@ -488,27 +489,42 @@ public class TestExecutor {
             } else if ("API".equals(tc.getTestType())) {
                 RestAssured.baseURI = tc.getUrlEndpoint();
                 String method = tc.getHttpMethodAction().toUpperCase();
+                String body = tc.getInputData().trim();
+                String expectedStr = tc.getExpectedResult().split(" ")[0];
+                int expectedCode = Integer.parseInt(expectedStr);
                 if (isMulti) {
-                    // Multi for API: Sequential (third snippet)
                     for (JsonNode actionNode : actions) {
                         String apiMethod = actionNode.get("type").asText().toUpperCase();
-                        String body = actionNode.has("value") ? actionNode.get("value").asText() : tc.getInputData();
-                        executeApiCall(apiMethod, body, tc.getExpectedResult());
+                        String apiBody = actionNode.has("value") ? actionNode.get("value").asText() : body;
+                        executeApiCall(apiMethod, apiBody, expectedCode);
                     }
                 } else {
                     // Single (first snippet)
                     if ("GET".equals(method)) {
-                        given().when().get().then().statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
+                        given().when().get().then().statusCode(expectedCode);
                     } else if ("POST".equals(method)) {
-                        given().body(tc.getInputData()).when().post().then()
-                                .statusCode(Integer.parseInt(tc.getExpectedResult().split(" ")[0]));
+                        Response response = given()
+                                .contentType(ContentType.JSON)
+                                .body(body.isEmpty() ? "{}" : body)
+                                .when().post();
+                        response.then().statusCode(expectedCode);
                     }
                 }
                 result.setStatus(TestStatus.PASSED); // Assume success
             }
-        } catch (Exception e) {
+        } catch (AssertionError ae) {
+            // FIXED: Catch assertion (e.g., 401 != 200) — set FAILED, log
+            System.err.println("API assertion failed for " + tc.getTestName() + ": " + ae.getMessage());
             result.setStatus(TestStatus.FAILED);
-            result.setErrorMessage(e.getMessage());
+            result.setErrorMessage("AssertionError: " + ae.getMessage() + " (URL: " + tc.getUrlEndpoint() + ")");
+        } catch (Exception e) {
+            String errorMsg = e.getMessage();
+            result.setStatus(TestStatus.FAILED);
+            if (errorMsg != null && errorMsg.length() > 2000) { // FIXED: Optional truncate
+                errorMsg = errorMsg.substring(0, 2000) + "... (truncated)";
+            }
+            result.setErrorMessage(errorMsg);
+            result.setStatus(TestStatus.FAILED);
         }
 
         result.setDuration(System.currentTimeMillis() - start);
@@ -519,12 +535,17 @@ public class TestExecutor {
      * Helper for single API call (used in multi).
      * FIXED: Added expectedResult param for status check.
      */
-    private void executeApiCall(String method, String body, String expectedResult) {
-        int expectedCode = Integer.parseInt(expectedResult.split(" ")[0]);
-        switch (method) {
-            case "GET" -> given().when().get().then().statusCode(expectedCode);
-            case "POST" -> given().body(body).when().post().then().statusCode(expectedCode);
-            default -> throw new IllegalArgumentException("Unsupported API method: " + method);
+    private void executeApiCall(String method, String body, int expectedCode) {
+        if ("GET".equals(method)) {
+            given().when().get().then().statusCode(expectedCode);
+        } else if ("POST".equals(method)) {
+            given()
+                    .contentType(ContentType.JSON) // FIXED: JSON header
+                    .body(body.isEmpty() ? "{}" : body)
+                    .when().post()
+                    .then().statusCode(expectedCode);
+        } else {
+            throw new IllegalArgumentException("Unsupported API method: " + method);
         }
     }
 

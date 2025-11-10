@@ -1,8 +1,11 @@
 package com.example.test_framework_api.service;
 
 import com.example.test_framework_api.model.TestCase;
+import com.example.test_framework_api.model.TestStatus;
 import com.example.test_framework_api.model.TestSuite;
+import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.repository.TestCaseRepository;
+import com.example.test_framework_api.repository.TestResultRepository;
 import com.example.test_framework_api.repository.TestSuiteRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -21,6 +24,7 @@ public class TestSuiteService {
 
     private final TestSuiteRepository suiteRepository;
     private final TestCaseRepository caseRepository;
+    private final TestResultRepository resultRepository;
 
     // NEW FEATURE: Import CSV to create TestSuite with TestCases
     public TestSuite importFromCsv(MultipartFile file, String suiteName, String description)
@@ -95,8 +99,12 @@ public class TestSuiteService {
 
     public void updateSuiteStatus(Long suiteId) {
         TestSuite suite = getSuiteById(suiteId);
-        if (suite != null) {
-            suite.updateStatusFromResults();
+        if (suite != null && suite.getTestRun() != null) {
+            Long runId = suite.getTestRun().getId();
+            List<TestResult> results = resultRepository.findByTestRunId(runId);  // FIXED: Now defined, uses custom method
+            long total = suite.getTestCases().stream().filter(tc -> Boolean.TRUE.equals(tc.getRun())).count();
+            long passed = results.stream().filter(r -> r.getStatus() == TestStatus.PASSED).count();
+            suite.setStatus(passed == total ? TestStatus.PASSED : (passed > 0 ? TestStatus.COMPLETED : TestStatus.FAILED));
             suiteRepository.save(suite);
         }
     }
