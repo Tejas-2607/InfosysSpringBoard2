@@ -52,5 +52,7 @@ allure.properties
 sample.py
 sample2.py
 sample3.py
+sample4.py
 sample-suite-10cases.csv
 test_suite_combined.csv
+test_cases.csv
