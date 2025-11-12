@@ -755,7 +755,7 @@ public class TestExecutor {
                 ChromeOptions options = new ChromeOptions();
                 options.addArguments("--headless=new", "--disable-gpu", "--no-sandbox");
                 WebDriver driver = new ChromeDriver(options);
-                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15)); // FIXED: Longer wait for load
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(4)); // FIXED: Longer wait for load
                 By locator = null;
                 try {
                     driver.get(tc.getUrlEndpoint());
