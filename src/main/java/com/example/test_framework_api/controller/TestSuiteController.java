@@ -29,7 +29,7 @@ public class TestSuiteController {
   private final ProduceReportHtmlService reportService;
 
   // NEW FEATURE: Import CSV as test suite
-  @PostMapping("/import")
+  @PostMapping("/import-csv")
   public ResponseEntity<TestSuite> importSuite(@ModelAttribute TestSuiteRequest request) {
     try {
       TestSuite suite = suiteService.importFromCsv(request.getCsvFile(), request.getSuiteName(),
@@ -52,7 +52,7 @@ public class TestSuiteController {
   }
 
   // NEW FEATURE: Queue suite execution as TestRun
-  @PostMapping("/{id}/run")
+  @PostMapping("/{id}/execute")
   public ResponseEntity<String> runSuite(@PathVariable Long id) {
     TestSuite suite = suiteService.getSuiteById(id);
     if (suite == null)
