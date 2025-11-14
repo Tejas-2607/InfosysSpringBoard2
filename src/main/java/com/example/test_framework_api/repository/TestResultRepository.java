@@ -13,7 +13,7 @@ import org.springframework.data.jpa.repository.Query;
  * ANALYTICS ENHANCED: Additional queries for trends and flaky tests
  */
 public interface TestResultRepository extends JpaRepository<TestResult, Long> {
-  
+
   /**
    * Daily pass rate for trend analysis.
    */
@@ -29,11 +29,16 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
   @Query("SELECT r FROM TestResult r ORDER BY r.testRun.id DESC")
   List<TestResult> findTop10ByOrderByTestRunIdDesc();
 
+  // List<TestResult> findByTestRunId(Long testRunId);
   /**
    * Find results by test run ID.
    */
   @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId")
   List<TestResult> findByTestRunId(Long runId);
+
+  List<TestResult> findByTestSuiteId(Long testSuiteId);
+
+  List<TestResult> findByStatus(TestStatus status);
 
   /**
    * Find results by test run ID and test name.
@@ -71,6 +76,13 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
       "GROUP BY tr.testName " +
       "HAVING COUNT(DISTINCT tr.status) > 1")
   List<Object[]> findTestsWithMixedResults();
+
+  @Query("SELECT r FROM TestResult r WHERE r.testSuite.id = :suiteId ORDER BY r.createdAt DESC")
+  List<TestResult> findLatestBySuiteId(@Param("suiteId") Long suiteId);
+
+  @Query("SELECT r FROM TestResult r WHERE r.createdAt BETWEEN :start AND :end")
+  List<TestResult> findByCreatedAtBetween(@Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end);
 }
 // package com.example.test_framework_api.repository;
 
@@ -82,22 +94,25 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
 // import org.springframework.data.jpa.repository.JpaRepository;
 // import org.springframework.data.jpa.repository.Query;
 
-// public interface TestResultRepository extends JpaRepository<TestResult, Long> {
-//   @Query("SELECT DATE(r.createdAt), " +
-//       "SUM(CASE WHEN r.status = 'PASSED' THEN 1 ELSE 0 END) * 100.0 / COUNT(r) " +
-//       "FROM TestResult r WHERE r.createdAt >= :since " +
-//       "GROUP BY DATE(r.createdAt) ORDER BY DATE(r.createdAt)")
-//   List<Object[]> findDailyPassRate(@Param("since") LocalDateTime since);
+// public interface TestResultRepository extends JpaRepository<TestResult, Long>
+// {
+// @Query("SELECT DATE(r.createdAt), " +
+// "SUM(CASE WHEN r.status = 'PASSED' THEN 1 ELSE 0 END) * 100.0 / COUNT(r) " +
+// "FROM TestResult r WHERE r.createdAt >= :since " +
+// "GROUP BY DATE(r.createdAt) ORDER BY DATE(r.createdAt)")
+// List<Object[]> findDailyPassRate(@Param("since") LocalDateTime since);
 
-//   @Query("SELECT r FROM TestResult r ORDER BY r.testRun.id DESC")
-//   List<TestResult> findTop10ByOrderByTestRunIdDesc();
+// @Query("SELECT r FROM TestResult r ORDER BY r.testRun.id DESC")
+// List<TestResult> findTop10ByOrderByTestRunIdDesc();
 
-//   @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId")
-//   List<TestResult> findByTestRunId(Long runId);
+// @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId")
+// List<TestResult> findByTestRunId(Long runId);
 
-//   /**
-//    * FIXED #2: New method to find results by test run ID and test name
-//    */
-//   @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId AND tr.testName = :testName")
-//   List<TestResult> findByTestRunIdAndTestName(@Param("runId") Long runId, @Param("testName") String testName);
+// /**
+// * FIXED #2: New method to find results by test run ID and test name
+// */
+// @Query("SELECT tr FROM TestResult tr WHERE tr.testRun.id = :runId AND
+// tr.testName = :testName")
+// List<TestResult> findByTestRunIdAndTestName(@Param("runId") Long runId,
+// @Param("testName") String testName);
 // }

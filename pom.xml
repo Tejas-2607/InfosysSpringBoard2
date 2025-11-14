@@ -151,6 +151,11 @@
     <artifactId>selenium-devtools</artifactId>
     <version>4.0.0-rc-1</version>
 </dependency>
+<dependency>
+    <groupId>org.apache.pdfbox</groupId>
+    <artifactId>pdfbox</artifactId>
+    <version>3.0.0</version>
+</dependency>
 			<!-- <dependency>
 			<groupId>io.rest-assured</groupId>
 			<artifactId>rest-assured</artifactId>

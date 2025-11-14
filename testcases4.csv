@@ -1,0 +1,31 @@
+testCaseId,testName,testType,urlEndpoint,httpMethodAction,locatorType,locatorValue,inputData,expectedResult,priority,run,description,test_suite_id
+TC001,Google Search Click,UI,https://www.google.com,click,name,q,,Search results,High,true,Navigate to Google and click search box,1
+TC002,Wikipedia Search,UI,https://www.wikipedia.org,type,id,searchInput,Selenium,typed,High,true,Type search term in Wikipedia,1
+TC003,DuckDuckGo Search,UI,https://duckduckgo.com,type,id,searchbox_input,automation,typed,Medium,true,Type in DuckDuckGo search box,1
+TC004,GitHub Login Click,UI,https://github.com/login,click,id,login_field,,clicked,Medium,true,Click GitHub login username field,1
+TC005,API Get Users Success,API,https://jsonplaceholder.typicode.com/users,GET,,,,200 OK,High,true,Fetch list of users from API,1
+TC006,API Get Single User,API,https://jsonplaceholder.typicode.com/users/1,GET,,,,200 OK,Medium,true,Fetch single user by ID,1
+TC007,API Create Post,API,https://jsonplaceholder.typicode.com/posts,POST,,,"{""title"":""Test"",""body"":""Content"",""userId"":1}",201 Created,High,true,Create new post via API,1
+TC008,Bing Search Box,UI,https://www.bing.com,type,id,sb_form_q,testing,typed,Medium,true,Enter search query in Bing,1
+TC009,Yahoo Search,UI,https://www.yahoo.com,click,id,header-search-input,,clicked,Low,true,Click Yahoo search input,1
+TC010,API Get Posts,API,https://jsonplaceholder.typicode.com/posts,GET,,,,200 OK,Medium,true,Retrieve all posts from API,1
+TC011,Stack Overflow Search,UI,https://stackoverflow.com,type,name,q,javascript,typed,Medium,true,Type search query in Stack Overflow,1
+TC012,API Get Comments,API,https://jsonplaceholder.typicode.com/comments,GET,,,,200 OK,Low,true,Fetch all comments,1
+TC013,MDN Web Docs Search,UI,https://developer.mozilla.org,click,id,hp-search-input,,clicked,Low,true,Click MDN search input,1
+TC014,NPM Search,UI,https://www.npmjs.com,type,id,search,react,typed,Medium,true,Search for React package on NPM,1
+TC015,API Update User,API,https://jsonplaceholder.typicode.com/users/1,PUT,,,"{""name"":""Updated Name"",""email"":""updated@test.com""}",200 OK,Medium,true,Update user information,1
+TC016,Reddit Search,UI,https://www.reddit.com,click,name,q,,clicked,Low,true,Click Reddit search box,1
+TC017,API Delete Post,API,https://jsonplaceholder.typicode.com/posts/1,DELETE,,,,200 OK,Low,true,Delete post by ID,1
+TC018,YouTube Search,UI,https://www.youtube.com,click,name,search_query,,clicked,Low,true,Click YouTube search box,1
+TC019,API Get Albums,API,https://jsonplaceholder.typicode.com/albums,GET,,,,200 OK,Low,true,Retrieve all albums,1
+TC020,Twitter Login,UI,https://twitter.com/login,type,name,text,testuser,typed,Medium,true,Type username in Twitter login,1
+TC021,API Get Photos,API,https://jsonplaceholder.typicode.com/photos,GET,,,,200 OK,Low,true,Fetch all photos,1
+TC022,LinkedIn Search,UI,https://www.linkedin.com,click,xpath,//input[@placeholder='Search'],,clicked,Medium,true,Click LinkedIn search,1
+TC023,API Get Todos,API,https://jsonplaceholder.typicode.com/todos,GET,,,,200 OK,Low,true,Retrieve all todos,1
+TC024,Medium Search,UI,https://medium.com,type,name,q,technology,typed,Medium,true,Search for technology articles,1
+TC025,API Create User,API,https://jsonplaceholder.typicode.com/users,POST,,,"{""name"":""New User"",""email"":""newuser@test.com""}",201 Created,Medium,true,Create new user via API,1
+TC026,Amazon Search,UI,https://www.amazon.com,type,id,twotabsearchtextbox,laptop,typed,High,true,Search for laptop on Amazon,1
+TC027,API Get Single Post,API,https://jsonplaceholder.typicode.com/posts/1,GET,,,,200 OK,Medium,true,Fetch single post by ID,1
+TC028,Invalid Element Locator,UI,https://www.google.com,click,id,nonExistentElement99,,clicked,High,true,Try to click non-existent element - WILL FAIL,1
+TC029,Invalid API Endpoint,API,https://jsonplaceholder.typicode.com/invalid-endpoint-404,GET,,,,200 OK,Medium,true,Call non-existent API endpoint - WILL FAIL,1
+TC030,Invalid Submit No Form,UI,https://www.wikipedia.org,submit,id,randomNonFormElement,,Submitted,High,true,Submit action on element without form - WILL FAIL,1
