@@ -1,56 +1,99 @@
 package com.example.test_framework_api.model;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
 import java.util.List;
 
 /**
- * Request model for dynamic element testing.
- * Supports single action (string) or multiple (list of ActionStep).
- * Backward compatible: "action" as string works for single.
+ * types to check
+ * 
+ * UI Test Example:
+ * {
+ * "testType": "UI",
+ * "url": "https://example.com",
+ * "elementId": "submit-button",
+ * "action": "click",
+ * "expectedResult": "Form submitted"
+ * }
+ * 
+ * UI Multi-Action Example:
+ * {
+ * "testType": "UI",
+ * "url": "https://example.com/form",
+ * "elementId": "username",
+ * "actions": [
+ * {"type": "clear"},
+ * {"type": "type", "value": "testuser"},
+ * {"type": "submit"}
+ * ]
+ * }
+ * 
+ * API GET Example:
+ * {
+ * "testType": "API",
+ * "url": "https://api.example.com/users",
+ * "httpMethod": "GET",
+ * "expectedResult": "200"
+ * }
+ * 
+ * API POST Example:
+ * {
+ * "testType": "API",
+ * "url": "https://api.example.com/users",
+ * "httpMethod": "POST",
+ * "requestBody": "{\"name\":\"John\",\"email\":\"john@example.com\"}",
+ * "expectedResult": "201"
+ * }
  */
+@Data
 public class TestElementRequest {
+
+    // === COMMON FIELDS (UI & API) ===
 
     @NotBlank(message = "URL is required")
     private String url;
 
-    @NotBlank(message = "Element ID is required")
-    private String elementId;
+    private String testType; // "UI" or "API" (default: UI)
 
-    private String action;  // Single action (backward compatible)
+    private String expectedResult; // UI: text/title/alert, API: status code or body content
 
-    private List<ActionStep> actions;  // Multiple actions (new)
+    // === UI-SPECIFIC FIELDS ===
 
-    private String expectedResult; // Optional for final validation
+    private String elementId; // Element ID to interact with
 
-    // ActionStep for multiple
+    private String action; // Single action: "click", "type", "submit", etc.
+
+    private List<ActionStep> actions; // Multiple actions (advanced)
+
+    private String inputValue; // For "type" action (alternative to ActionStep value)
+
+    // === API-SPECIFIC FIELDS ===
+
+    private String httpMethod; // GET, POST, PUT, PATCH, DELETE
+
+    private String requestBody; // JSON body for POST/PUT/PATCH
+
+    /**
+     * Action step for multi-action UI tests
+     */
+    @Data
     public static class ActionStep {
-        private String type;  // "click", "doubleclick", "rightclick", "clear", "type", "submit"
-        private String value; // For "type" (text to input)
-
-        // Getters/Setters
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
-        public String getValue() { return value; }
-        public void setValue(String value) { this.value = value; }
+        private String type; // "click", "doubleclick", "rightclick", "clear", "type", "submit", "hover"
+        private String value; // For "type" action (text to input)
     }
 
-    // Constructors
-    public TestElementRequest() {}
+    // === VALIDATION HELPERS ===
 
-    // Getters & Setters
-    public String getUrl() { return url; }
-    public void setUrl(String url) { this.url = url; }
+    public boolean isUITest() {
+        return testType == null || "UI".equalsIgnoreCase(testType);
+    }
 
-    public String getElementId() { return elementId; }
-    public void setElementId(String elementId) { this.elementId = elementId; }
+    public boolean isAPITest() {
+        return "API".equalsIgnoreCase(testType);
+    }
 
-    public String getAction() { return action; }
-    public void setAction(String action) { this.action = action; }
-
-    public List<ActionStep> getActions() { return actions; }
-    public void setActions(List<ActionStep> actions) { this.actions = actions; }
-
-    public String getExpectedResult() { return expectedResult; }
-    public void setExpectedResult(String expectedResult) { this.expectedResult = expectedResult; }
+    public boolean hasMultipleActions() {
+        return actions != null && !actions.isEmpty();
+    }
 }
