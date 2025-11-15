@@ -48,6 +48,7 @@ testpage.html
 test-framework.log
 
 report-template.html
+.allure
 allure.properties
 sample.py
 sample2.py
