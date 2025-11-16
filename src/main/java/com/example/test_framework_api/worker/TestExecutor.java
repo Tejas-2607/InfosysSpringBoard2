@@ -18,6 +18,11 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 // import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+// import com.example.test_framework_api.model.User;
+import com.example.test_framework_api.repository.UserRepository;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -37,6 +42,9 @@ public class TestExecutor {
     private final TestResultService testResultService;
     // private final RetryTemplate retryTemplate;
 
+    @Autowired
+    private UserRepository userRepository;
+
     /**
      * Execute a single test case (UI or API)
      */
@@ -47,6 +55,13 @@ public class TestExecutor {
         result.setTestRun(testRun);
         result.setTestSuite(testCase.getTestSuite());
         result.setCreatedAt(LocalDateTime.now());
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String username = authentication.getName();
+            userRepository.findByUsername(username).ifPresent(result::setExecutedBy);
+        }
 
         try {
             log.info("Executing {} test: {}", testCase.getTestType(), testCase.getTestCaseId());
@@ -96,7 +111,7 @@ public class TestExecutor {
             driver.get(url);
 
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-            
+
             // Find element using locator
             WebElement element = findElement(driver, wait, testCase);
 
@@ -130,31 +145,31 @@ public class TestExecutor {
         try {
             response = switch (method) {
                 case "GET" -> RestAssured.given()
-                    .when()
-                    .get(url);
-                
+                        .when()
+                        .get(url);
+
                 case "POST" -> RestAssured.given()
-                    .contentType("application/json")
-                    .body(inputData != null ? inputData : "{}")
-                    .when()
-                    .post(url);
-                
+                        .contentType("application/json")
+                        .body(inputData != null ? inputData : "{}")
+                        .when()
+                        .post(url);
+
                 case "PUT" -> RestAssured.given()
-                    .contentType("application/json")
-                    .body(inputData != null ? inputData : "{}")
-                    .when()
-                    .put(url);
-                
+                        .contentType("application/json")
+                        .body(inputData != null ? inputData : "{}")
+                        .when()
+                        .put(url);
+
                 case "PATCH" -> RestAssured.given()
-                    .contentType("application/json")
-                    .body(inputData != null ? inputData : "{}")
-                    .when()
-                    .patch(url);
-                
+                        .contentType("application/json")
+                        .body(inputData != null ? inputData : "{}")
+                        .when()
+                        .patch(url);
+
                 case "DELETE" -> RestAssured.given()
-                    .when()
-                    .delete(url);
-                
+                        .when()
+                        .delete(url);
+
                 default -> throw new IllegalArgumentException("Unsupported HTTP method: " + method);
             };
 
@@ -250,8 +265,8 @@ public class TestExecutor {
         if (expectedResult.matches("\\d{3}.*")) {
             int expectedStatus = Integer.parseInt(expectedResult.split("\\s")[0]);
             if (response.getStatusCode() != expectedStatus) {
-                throw new AssertionError("Expected status " + expectedStatus + 
-                    " but got " + response.getStatusCode());
+                throw new AssertionError("Expected status " + expectedStatus +
+                        " but got " + response.getStatusCode());
             }
         }
 
@@ -267,8 +282,8 @@ public class TestExecutor {
     /**
      * Execute dynamic test from TestEntityController
      */
-    public void executeDynamicTest(String url, String elementId, String action, 
-                                   String expectedResult, String value) {
+    public void executeDynamicTest(String url, String elementId, String action,
+            String expectedResult, String value) {
         WebDriver driver = null;
         try {
             WebDriverManager.chromedriver().setup();
@@ -304,9 +319,9 @@ public class TestExecutor {
     /**
      * Execute multi-action dynamic test
      */
-    public void executeDynamicMultiAction(String url, String elementId, 
-                                         List<Map<String, Object>> actions,
-                                         String expectedResult) {
+    public void executeDynamicMultiAction(String url, String elementId,
+            List<Map<String, Object>> actions,
+            String expectedResult) {
         WebDriver driver = null;
         try {
             WebDriverManager.chromedriver().setup();
