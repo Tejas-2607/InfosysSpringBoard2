@@ -4,6 +4,8 @@ import com.example.test_framework_api.dto.TestSuiteRequest;
 import com.example.test_framework_api.dto.TestCaseExecutionRequest;
 import com.example.test_framework_api.model.TestRun;
 import com.example.test_framework_api.model.TestSuite;
+import com.example.test_framework_api.model.User;
+import com.example.test_framework_api.repository.UserRepository;
 import com.example.test_framework_api.service.TestRunService;
 import com.example.test_framework_api.service.TestSuiteService;
 import com.example.test_framework_api.service.ProduceReportHtmlService;
@@ -17,12 +19,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.core.Authentication;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.example.test_framework_api.config.RabbitMQConfig.TEST_SUITE_QUEUE;
 
@@ -44,13 +50,15 @@ public class TestSuiteController {
     private final RabbitTemplate rabbitTemplate;
     private final ProduceReportHtmlService reportService;
     private final MetricsService metricsService;
+    private final UserRepository userRepository;
 
     @PostMapping("/import-csv")
-    public ResponseEntity<TestSuite> importSuite(@ModelAttribute TestSuiteRequest request) {
+    public ResponseEntity<TestSuite> importSuite(@ModelAttribute TestSuiteRequest request,Authentication authentication) {
         try {
             TestSuite suite = suiteService.importFromCsv(request.getCsvFile(),
                     request.getSuiteName(),
-                    request.getDescription());
+                    request.getDescription(),
+                    authentication);
             return ResponseEntity.ok(suite);
         } catch (Exception e) {
             log.error("Failed to import CSV: {}", e.getMessage());
@@ -58,10 +66,10 @@ public class TestSuiteController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<List<TestSuite>> getSuites() {
-        return ResponseEntity.ok(suiteService.getAllSuites());
-    }
+    // @GetMapping
+    // public ResponseEntity<List<TestSuite>> getSuites() {
+    //     return ResponseEntity.ok(suiteService.getAllSuites());
+    // }
 
     @GetMapping("/{id}")
     public ResponseEntity<TestSuite> getSuite(@PathVariable Long id) {
@@ -139,35 +147,31 @@ public class TestSuiteController {
         try {
             String reportPath = reportService.generateSuiteReport(id);
             return ResponseEntity.ok(Map.of(
-                "message", "Report generated successfully",
-                "reportPath", reportPath,
-                "suiteId", id
-            ));
+                    "message", "Report generated successfully",
+                    "reportPath", reportPath,
+                    "suiteId", id));
         } catch (IllegalArgumentException e) {
             log.error("Suite not found: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of(
-                    "error", "Suite not found",
-                    "suiteId", id,
-                    "message", e.getMessage()
-                ));
+                    .body(Map.of(
+                            "error", "Suite not found",
+                            "suiteId", id,
+                            "message", e.getMessage()));
         } catch (IllegalStateException e) {
             log.warn("Suite not executed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED)
-                .body(Map.of(
-                    "error", "Suite not executed",
-                    "suiteId", id,
-                    "message", e.getMessage(),
-                    "action", "Execute the suite first",
-                    "executeUrl", "/api/suites/" + id + "/execute"
-                ));
+                    .body(Map.of(
+                            "error", "Suite not executed",
+                            "suiteId", id,
+                            "message", e.getMessage(),
+                            "action", "Execute the suite first",
+                            "executeUrl", "/api/suites/" + id + "/execute"));
         } catch (Exception e) {
             log.error("Error generating report: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "error", "Report generation failed",
-                    "message", e.getMessage()
-                ));
+                    .body(Map.of(
+                            "error", "Report generation failed",
+                            "message", e.getMessage()));
         }
     }
 
@@ -183,7 +187,7 @@ public class TestSuiteController {
             TestSuite suite = suiteService.getSuiteById(id);
             if (suite == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Suite not found", "suiteId", id));
+                        .body(Map.of("error", "Suite not found", "suiteId", id));
             }
 
             // FIXED: Null-safe trend and flaky test retrieval
@@ -210,30 +214,28 @@ public class TestSuiteController {
         } catch (IllegalStateException e) {
             log.warn("Analytics unavailable: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED)
-                .body(Map.of(
-                    "error", "Analytics unavailable",
-                    "suiteId", id,
-                    "message", "Suite has not been executed yet",
-                    "action", "Execute the suite first",
-                    "executeUrl", "/api/suites/" + id + "/execute"
-                ));
+                    .body(Map.of(
+                            "error", "Analytics unavailable",
+                            "suiteId", id,
+                            "message", "Suite has not been executed yet",
+                            "action", "Execute the suite first",
+                            "executeUrl", "/api/suites/" + id + "/execute"));
         } catch (NullPointerException e) {
             log.error("NPE in analytics: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "error", "Analytics data unavailable",
-                    "message", "Ensure suite has been executed",
-                    "details", e.getMessage()
-                ));
+                    .body(Map.of(
+                            "error", "Analytics data unavailable",
+                            "message", "Ensure suite has been executed",
+                            "details", e.getMessage()));
         } catch (Exception e) {
             log.error("Analytics error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "error", "Failed to generate analytics",
-                    "details", e.getMessage()
-                ));
+                    .body(Map.of(
+                            "error", "Failed to generate analytics",
+                            "details", e.getMessage()));
         }
     }
+
     /**
      * CRITICAL FIX: Proper exception handling for CSV export
      */
@@ -243,16 +245,16 @@ public class TestSuiteController {
             TestSuite suite = suiteService.getSuiteById(id);
             if (suite == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Suite not found", "suiteId", id));
+                        .body(Map.of("error", "Suite not found", "suiteId", id));
             }
 
             byte[] csvContent = reportService.generateCsvReport(id);
-            
+
             if (csvContent == null || csvContent.length == 0) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "CSV generation failed - empty content"));
+                        .body(Map.of("error", "CSV generation failed - empty content"));
             }
-            
+
             ByteArrayResource resource = new ByteArrayResource(csvContent);
 
             return ResponseEntity.ok()
@@ -261,35 +263,74 @@ public class TestSuiteController {
                     .contentType(MediaType.parseMediaType("text/csv"))
                     .contentLength(csvContent.length)
                     .body(resource);
-                    
+
         } catch (IllegalArgumentException e) {
             log.error("Suite not found: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                    "error", "Suite not found",
-                    "suiteId", id,
-                    "message", e.getMessage()
-                ));
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "error", "Suite not found",
+                            "suiteId", id,
+                            "message", e.getMessage()));
         } catch (IllegalStateException e) {
             log.warn("Suite not executed for CSV: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                    "error", "Suite not executed",
-                    "suiteId", id,
-                    "message", e.getMessage(),
-                    "action", "Execute the suite first using POST /api/suites/" + id + "/execute",
-                    "executeUrl", "/api/suites/" + id + "/execute"
-                ));
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "error", "Suite not executed",
+                            "suiteId", id,
+                            "message", e.getMessage(),
+                            "action", "Execute the suite first using POST /api/suites/" + id + "/execute",
+                            "executeUrl", "/api/suites/" + id + "/execute"));
         } catch (Exception e) {
             log.error("CSV generation error: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                    "error", "CSV generation failed",
-                    "message", e.getMessage()
-                ));
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "error", "CSV generation failed",
+                            "message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/my-suites")
+    public ResponseEntity<List<TestSuite>> getMySuites(Authentication authentication) {
+        String username = authentication.getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<TestSuite> userSuites = suiteService.getSuitesByUser(currentUser.getId());
+        return ResponseEntity.ok(userSuites);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getSuites() {
+        List<TestSuite> suites = suiteService.getAllSuites();
+
+        // Add creator info to each suite
+        List<Map<String, Object>> enrichedSuites = suites.stream()
+                .map(suite -> {
+                    Map<String, Object> suiteData = new HashMap<>();
+                    suiteData.put("id", suite.getId());
+                    suiteData.put("name", suite.getName());
+                    suiteData.put("description", suite.getDescription());
+                    suiteData.put("status", suite.getStatus());
+                    suiteData.put("testCases", suite.getTestCases());
+                    suiteData.put("createdAt", suite.getCreatedAt());
+
+                    // FIXED #4: Add creator info
+                    if (suite.getCreatedBy() != null) {
+                        Map<String, Object> creatorInfo = new HashMap<>();
+                        creatorInfo.put("userId", suite.getCreatedBy().getId());
+                        creatorInfo.put("username", suite.getCreatedBy().getUsername());
+                        creatorInfo.put("roles", suite.getCreatedBy().getRoles());
+                        suiteData.put("createdBy", creatorInfo);
+                    }
+
+                    return suiteData;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(enrichedSuites);
     }
 }

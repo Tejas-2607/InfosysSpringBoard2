@@ -24,7 +24,7 @@ public class TestSuite {
     @OneToMany(mappedBy = "testSuite", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference // FIXED: Serializes testCases without back-ref cycle
     private List<TestCase> testCases;
-    
+
     @ManyToOne
     @JoinColumn(name = "test_run_id")
     private TestRun testRun; // NEW FEATURE: Links suite to a TestRun for execution context
@@ -38,6 +38,10 @@ public class TestSuite {
 
     @Column(name = "report_path")
     private String reportPath;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
 
     public void updateStatusFromResults() {
         if (testCases == null || testCases.isEmpty()) {

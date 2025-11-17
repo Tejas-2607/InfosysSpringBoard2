@@ -304,36 +304,35 @@ public class ProduceReportHtmlService {
         String formattedDate = LocalDateTime.now().format(formatter);
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html><html><head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<title>Suite Report: ").append(suite.getName()).append("</title>");
-        html.append("<style>");
-        html.append("body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }");
-        html.append(
-                ".container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }");
-        html.append("h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }");
-        html.append(
-                ".summary { background: #e8f5e9; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #4CAF50; }");
-        html.append(".summary p { margin: 8px 0; font-size: 16px; }");
-        html.append("table { border-collapse: collapse; width: 100%; margin-top: 20px; }");
-        html.append("th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }");
-        html.append("th { background-color: #4CAF50; color: white; font-weight: bold; }");
-        html.append("tr:nth-child(even) { background-color: #f9f9f9; }");
-        html.append(".passed { background-color: #d4edda !important; }");
-        html.append(".failed { background-color: #f8d7da !important; }");
-        html.append("</style></head><body>");
+    html.append("<meta charset=\"UTF-8\">");
+    html.append("<title>Suite Report: ").append(suite.getName()).append("</title>");
+    html.append("<style>");
+    html.append("body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }");
+    html.append(".container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }");
+    html.append("h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }");
+    html.append(".summary { background: #e8f5e9; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #4CAF50; }");
+    html.append(".summary p { margin: 8px 0; font-size: 16px; }");
+    html.append("table { border-collapse: collapse; width: 100%; margin-top: 20px; }");
+    html.append("th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }");
+    html.append("th { background-color: #4CAF50; color: white; font-weight: bold; }");
+    html.append("tr:nth-child(even) { background-color: #f9f9f9; }");
+    // CRITICAL FIX #8: Proper status-based row coloring
+    html.append(".status-passed { background-color: #d4edda !important; color: #155724; font-weight: bold; }");
+    html.append(".status-failed { background-color: #f8d7da !important; color: #721c24; font-weight: bold; }");
+    html.append("</style></head><body>");
 
-        html.append("<div class='container'>");
-        html.append("<h1>Test Suite Report: ").append(suite.getName()).append("</h1>");
+    html.append("<div class='container'>");
+    html.append("<h1>Test Suite Report: ").append(suite.getName()).append("</h1>");
 
-        html.append("<div class='summary'>");
-        html.append("<p><strong>Total Cases:</strong> ").append(total);
-        html.append(" | <strong>Passed:</strong> ").append(passed);
-        html.append(" | <strong>Failed:</strong> ").append(failed);
-        html.append(" | <strong>Pass Rate:</strong> ").append(String.format("%.2f%%", passRate)).append("</p>");
-        html.append("</div>");
+    html.append("<div class='summary'>");
+    html.append("<p><strong>Total Cases:</strong> ").append(total);
+    html.append(" | <strong>Passed:</strong> ").append(passed);
+    html.append(" | <strong>Failed:</strong> ").append(failed);
+    html.append(" | <strong>Pass Rate:</strong> ").append(String.format("%.2f%%", passRate)).append("</p>");
+    html.append("</div>");
 
-        html.append("<table>");
-        html.append("<tr><th>Case ID</th><th>Test Name</th><th>Type</th><th>Status</th><th>Duration (s)</th></tr>");
+    html.append("<table>");
+    html.append("<tr><th>Case ID</th><th>Test Name</th><th>Type</th><th>Status</th><th>Duration (s)</th></tr>");
 
         for (TestCase tc : suite.getTestCases()) {
             TestResult result = results.stream()

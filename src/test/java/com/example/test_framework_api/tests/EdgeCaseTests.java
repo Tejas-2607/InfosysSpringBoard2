@@ -18,6 +18,7 @@ import java.util.concurrent.Executor;
 
 // import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
@@ -33,27 +34,28 @@ class EdgeCaseTests {
 
     @Mock
     private TestSuiteRepository suiteRepository;
-    
+
     @Mock
     private TestCaseRepository caseRepository;
-    
+
     @Mock
     private TestResultRepository resultRepository;
-    
+
     @Mock
     private TestExecutor testExecutor;
-    
+
     @Mock
     private TestRunService runService;
-    
+
     private Executor uiTestExecutor;
     private Executor apiTestExecutor;
     private TestSuiteService suiteService;
+    private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        
+
         // Create real executors for testing
         ThreadPoolTaskExecutor uiExecutor = new ThreadPoolTaskExecutor();
         uiExecutor.setCorePoolSize(2);
@@ -70,13 +72,13 @@ class EdgeCaseTests {
         this.apiTestExecutor = apiExecutor;
 
         suiteService = new TestSuiteService(
-            suiteRepository, 
-            caseRepository, 
-            resultRepository, 
-            testExecutor,
-            uiTestExecutor,
-            apiTestExecutor
-        );
+                suiteRepository,
+                caseRepository,
+                resultRepository,
+                testExecutor,
+                uiTestExecutor,
+                apiTestExecutor,
+                userRepository);
     }
 
     /**
@@ -87,7 +89,7 @@ class EdgeCaseTests {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "Sequential Suite");
         testRun.setParallelThreads(1);
-        
+
         List<TestCase> testCases = new ArrayList<>();
         for (int i = 1; i <= 5; i++) {
             testCases.add(createTestCase("TC" + i, "UI", true));
@@ -98,15 +100,14 @@ class EdgeCaseTests {
 
         // Mock results (all passed)
         when(resultRepository.findByTestRunIdAndTestName(any(), any())).thenReturn(
-            List.of(createTestResult("TC1", TestStatus.PASSED))
-        );
+                List.of(createTestResult("TC1", TestStatus.PASSED)));
 
         CompletableFuture<Void> future = suiteService.executeSuiteParallel(suiteId, testRun, 1);
         future.get();
 
         // Verify sequential execution (all 5 tests)
         verify(testExecutor, times(5)).executeTestCase(any(TestCase.class), any(TestRun.class));
-        
+
         // Verify status update called
         verify(suiteRepository, atLeastOnce()).findById(suiteId);
     }
@@ -118,7 +119,7 @@ class EdgeCaseTests {
     void testInvalidThreads_Zero() throws Exception {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "Invalid Threads Suite");
-        
+
         List<TestCase> testCases = List.of(createTestCase("TC1", "UI", true));
         when(caseRepository.findByTestSuiteId(suiteId)).thenReturn(testCases);
         doNothing().when(testExecutor).executeTestCase(any(), any());
@@ -135,7 +136,7 @@ class EdgeCaseTests {
     void testInvalidThreads_Negative() throws Exception {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "Negative Threads Suite");
-        
+
         List<TestCase> testCases = List.of(createTestCase("TC1", "API", true));
         when(caseRepository.findByTestSuiteId(suiteId)).thenReturn(testCases);
         doNothing().when(testExecutor).executeTestCase(any(), any());
@@ -150,7 +151,7 @@ class EdgeCaseTests {
     void testInvalidThreads_Exceed() throws Exception {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "Exceed Threads Suite");
-        
+
         List<TestCase> testCases = List.of(createTestCase("TC1", "UI", true));
         when(caseRepository.findByTestSuiteId(suiteId)).thenReturn(testCases);
         doNothing().when(testExecutor).executeTestCase(any(), any());
@@ -169,7 +170,7 @@ class EdgeCaseTests {
     void testEmptySuite() throws Exception {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "Empty Suite");
-        
+
         // Mock empty test cases
         when(caseRepository.findByTestSuiteId(suiteId)).thenReturn(new ArrayList<>());
 
@@ -178,7 +179,7 @@ class EdgeCaseTests {
 
         // Verify no execution occurred
         verify(testExecutor, never()).executeTestCase(any(), any());
-        
+
         // Verify status update called (should set COMPLETE)
         verify(suiteRepository, atLeastOnce()).findById(suiteId);
     }
@@ -187,7 +188,7 @@ class EdgeCaseTests {
     void testAllDisabledSuite() throws Exception {
         Long suiteId = 1L;
         TestRun testRun = createTestRun(1L, "All Disabled Suite");
-        
+
         // All test cases disabled
         List<TestCase> testCases = new ArrayList<>();
         for (int i = 1; i <= 3; i++) {
@@ -204,17 +205,18 @@ class EdgeCaseTests {
     }
 
     /**
-     * EDGE CASE 4: Mixed failures should result in COMPLETED status (partial success).
+     * EDGE CASE 4: Mixed failures should result in COMPLETED status (partial
+     * success).
      */
     @Test
     void testMixedFailures() throws Exception {
         Long suiteId = 1L;
         TestSuite suite = new TestSuite();
         suite.setId(suiteId);
-        
+
         TestRun testRun = createTestRun(1L, "Mixed Failures Suite");
         suite.setTestRun(testRun);
-        
+
         // 5 test cases
         List<TestCase> testCases = new ArrayList<>();
         for (int i = 1; i <= 5; i++) {
@@ -237,9 +239,7 @@ class EdgeCaseTests {
         suiteService.updateSuiteStatus(suiteId);
 
         // Verify suite marked as COMPLETED (not PASSED, not FAILED)
-        verify(suiteRepository).save(argThat(s -> 
-            s.getStatus() == TestStatus.COMPLETED
-        ));
+        verify(suiteRepository).save(argThat(s -> s.getStatus() == TestStatus.COMPLETED));
     }
 
     @Test
@@ -247,21 +247,19 @@ class EdgeCaseTests {
         Long suiteId = 1L;
         TestSuite suite = new TestSuite();
         suite.setId(suiteId);
-        
+
         TestRun testRun = createTestRun(1L, "All Failures Suite");
         suite.setTestRun(testRun);
-        
+
         List<TestCase> testCases = List.of(
-            createTestCase("TC1", "UI", true),
-            createTestCase("TC2", "API", true)
-        );
+                createTestCase("TC1", "UI", true),
+                createTestCase("TC2", "API", true));
         suite.setTestCases(testCases);
 
         // All failed
         List<TestResult> results = List.of(
-            createTestResult("TC1", TestStatus.FAILED),
-            createTestResult("TC2", TestStatus.FAILED)
-        );
+                createTestResult("TC1", TestStatus.FAILED),
+                createTestResult("TC2", TestStatus.FAILED));
 
         when(suiteRepository.findById(suiteId)).thenReturn(java.util.Optional.of(suite));
         when(resultRepository.findByTestRunId(testRun.getId())).thenReturn(results);
@@ -269,9 +267,7 @@ class EdgeCaseTests {
         suiteService.updateSuiteStatus(suiteId);
 
         // Verify suite marked as FAILED
-        verify(suiteRepository).save(argThat(s -> 
-            s.getStatus() == TestStatus.FAILED
-        ));
+        verify(suiteRepository).save(argThat(s -> s.getStatus() == TestStatus.FAILED));
     }
 
     // Helper methods

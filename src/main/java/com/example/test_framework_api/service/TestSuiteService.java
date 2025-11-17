@@ -5,9 +5,11 @@ import com.example.test_framework_api.model.TestStatus;
 import com.example.test_framework_api.model.TestSuite;
 import com.example.test_framework_api.model.TestResult;
 import com.example.test_framework_api.model.TestRun;
+import com.example.test_framework_api.model.User;
 import com.example.test_framework_api.repository.TestCaseRepository;
 import com.example.test_framework_api.repository.TestResultRepository;
 import com.example.test_framework_api.repository.TestSuiteRepository;
+import com.example.test_framework_api.repository.UserRepository;
 import com.example.test_framework_api.worker.TestExecutor;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -17,7 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.security.core.Authentication;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -41,20 +43,26 @@ public class TestSuiteService {
     private final TestExecutor testExecutor;
     private final Executor uiTestExecutor;
     private final Executor apiTestExecutor;
+    private final UserRepository userRepository;
 
     /**
      * FIXED ISSUE #1: Auto-update suite status when test cases are loaded
      */
     @Transactional
-    public TestSuite importFromCsv(MultipartFile file, String suiteName, String description)
+    public TestSuite importFromCsv(MultipartFile file, String suiteName, String description,
+            Authentication authentication)
             throws IOException, CsvValidationException {
         if (file.isEmpty())
             throw new IllegalArgumentException("CSV file is empty");
 
+        String username = authentication.getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         TestSuite suite = new TestSuite();
         suite.setName(suiteName + " - " + System.currentTimeMillis());
         suite.setDescription(description);
         suite.setStatus(TestStatus.PENDING);
+        suite.setCreatedBy(currentUser); // FIXED #4: Track creator
         suite = suiteRepository.save(suite);
 
         List<TestCase> cases = new ArrayList<>();
@@ -108,13 +116,13 @@ public class TestSuiteService {
 
         caseRepository.saveAll(cases);
         suite.setTestCases(cases);
-        
+
         // FIXED ISSUE #1: Mark suite as "LOADED" after all test cases saved
         suite.setStatus(TestStatus.COMPLETED);
         suiteRepository.save(suite);
 
-        log.info("✓ Created suite ID {} with {} test cases - Status: COMPLETED (loaded)", 
-            suite.getId(), cases.size());
+        log.info("✓ Created suite ID {} with {} test cases - Status: COMPLETED (loaded)",
+                suite.getId(), cases.size());
         return suite;
     }
 
@@ -129,24 +137,24 @@ public class TestSuiteService {
     @Async("generalExecutor")
     public CompletableFuture<Void> executeSuiteParallel(Long suiteId, TestRun run, int parallelThreads) {
         log.info("Starting execution for suite {} with {} threads", suiteId, parallelThreads);
-        
+
         if (parallelThreads < 1 || parallelThreads > 8) {
             log.warn("Invalid parallelThreads {} for suite {}, defaulting to 1", parallelThreads, suiteId);
             parallelThreads = 1;
         }
-        
+
         List<TestCase> allCases = caseRepository.findByTestSuiteId(suiteId);
-        
+
         if (allCases == null || allCases.isEmpty()) {
             log.warn("Empty suite {} - no test cases to execute", suiteId);
             run.setStatus(TestStatus.COMPLETED);
             updateSuiteStatus(suiteId);
             return CompletableFuture.completedFuture(null);
         }
-        
+
         List<TestCase> enabledCases = allCases.stream()
-            .filter(tc -> Boolean.TRUE.equals(tc.getRun()))
-            .collect(Collectors.toList());
+                .filter(tc -> Boolean.TRUE.equals(tc.getRun()))
+                .collect(Collectors.toList());
 
         if (enabledCases.isEmpty()) {
             log.warn("All test cases disabled for suite {} - marking complete", suiteId);
@@ -178,11 +186,10 @@ public class TestSuiteService {
             try {
                 log.info("Sequential execution: {} - {}", tc.getTestCaseId(), tc.getTestName());
                 testExecutor.executeTestCase(tc, run);
-                
+
                 List<TestResult> results = resultRepository.findByTestRunIdAndTestName(
-                    run.getId(), tc.getTestName()
-                );
-                
+                        run.getId(), tc.getTestName());
+
                 if (!results.isEmpty()) {
                     TestResult latest = results.get(results.size() - 1);
                     if (latest.getStatus() == TestStatus.PASSED) {
@@ -190,13 +197,13 @@ public class TestSuiteService {
                         log.info("✓ PASSED: {}", tc.getTestCaseId());
                     } else {
                         failed++;
-                        log.warn("✗ FAILED: {} - {}", tc.getTestCaseId(), 
-                            latest.getErrorMessage());
+                        log.warn("✗ FAILED: {} - {}", tc.getTestCaseId(),
+                                latest.getErrorMessage());
                     }
                 } else {
                     log.warn("⚠ WARNING: No result saved for {}", tc.getTestCaseId());
                 }
-                
+
                 executed++;
             } catch (Exception e) {
                 failed++;
@@ -207,8 +214,8 @@ public class TestSuiteService {
         if (failed > 0 && passed > 0) {
             run.setStatus(TestStatus.COMPLETED);
             double rate = passed * 100.0 / (passed + failed);
-            log.info("Sequential suite COMPLETED (partial): {} passed, {} failed ({:.2f}%)", 
-                passed, failed, rate);
+            log.info("Sequential suite COMPLETED (partial): {} passed, {} failed ({:.2f}%)",
+                    passed, failed, rate);
         } else if (failed == 0) {
             run.setStatus(TestStatus.PASSED);
             log.info("Sequential suite PASSED: {}/{} (100%)", passed, executed);
@@ -216,51 +223,50 @@ public class TestSuiteService {
             run.setStatus(TestStatus.FAILED);
             log.warn("Sequential suite FAILED: 0/{} passed", executed);
         }
-        
+
         updateSuiteStatus(suiteId);
         return CompletableFuture.completedFuture(null);
     }
 
     private CompletableFuture<Void> executeParallel(List<TestCase> cases, TestRun run, Long suiteId) {
         List<TestCase> uiCases = cases.stream()
-            .filter(tc -> "UI".equals(tc.getTestType()))
-            .collect(Collectors.toList());
-        
+                .filter(tc -> "UI".equals(tc.getTestType()))
+                .collect(Collectors.toList());
+
         List<TestCase> apiCases = cases.stream()
-            .filter(tc -> "API".equals(tc.getTestType()))
-            .collect(Collectors.toList());
+                .filter(tc -> "API".equals(tc.getTestType()))
+                .collect(Collectors.toList());
 
         log.info("Executing {} UI tests and {} API tests in parallel", uiCases.size(), apiCases.size());
 
         List<CompletableFuture<Void>> uiFutures = uiCases.stream()
-            .map(tc -> CompletableFuture.runAsync(() -> {
-                try {
-                    log.debug("Executing UI test: {}", tc.getTestCaseId());
-                    testExecutor.executeTestCase(tc, run);
-                } catch (Exception e) {
-                    log.error("UI test {} failed: {}", tc.getTestCaseId(), e.getMessage());
-                }
-            }, uiTestExecutor))
-            .collect(Collectors.toList());
+                .map(tc -> CompletableFuture.runAsync(() -> {
+                    try {
+                        log.debug("Executing UI test: {}", tc.getTestCaseId());
+                        testExecutor.executeTestCase(tc, run);
+                    } catch (Exception e) {
+                        log.error("UI test {} failed: {}", tc.getTestCaseId(), e.getMessage());
+                    }
+                }, uiTestExecutor))
+                .collect(Collectors.toList());
 
         List<CompletableFuture<Void>> apiFutures = apiCases.stream()
-            .map(tc -> CompletableFuture.runAsync(() -> {
-                try {
-                    log.debug("Executing API test: {}", tc.getTestCaseId());
-                    testExecutor.executeTestCase(tc, run);
-                } catch (Exception e) {
-                    log.error("API test {} failed: {}", tc.getTestCaseId(), e.getMessage());
-                }
-            }, apiTestExecutor))
-            .collect(Collectors.toList());
+                .map(tc -> CompletableFuture.runAsync(() -> {
+                    try {
+                        log.debug("Executing API test: {}", tc.getTestCaseId());
+                        testExecutor.executeTestCase(tc, run);
+                    } catch (Exception e) {
+                        log.error("API test {} failed: {}", tc.getTestCaseId(), e.getMessage());
+                    }
+                }, apiTestExecutor))
+                .collect(Collectors.toList());
 
         List<CompletableFuture<Void>> allFutures = new ArrayList<>();
         allFutures.addAll(uiFutures);
         allFutures.addAll(apiFutures);
 
         CompletableFuture<Void> allOf = CompletableFuture.allOf(
-            allFutures.toArray(new CompletableFuture[0])
-        );
+                allFutures.toArray(new CompletableFuture[0]));
 
         return allOf.whenComplete((result, ex) -> {
             if (ex != null) {
@@ -268,7 +274,7 @@ public class TestSuiteService {
             } else {
                 log.info("Suite {} parallel execution completed successfully", suiteId);
             }
-            
+
             updateSuiteStatus(suiteId);
         });
     }
@@ -291,14 +297,14 @@ public class TestSuiteService {
             suite.setStatus(TestStatus.PENDING);
         } else {
             long total = suite.getTestCases().stream()
-                .filter(tc -> Boolean.TRUE.equals(tc.getRun()))
-                .count();
+                    .filter(tc -> Boolean.TRUE.equals(tc.getRun()))
+                    .count();
             long passed = results.stream()
-                .filter(r -> r.getStatus() == TestStatus.PASSED)
-                .count();
+                    .filter(r -> r.getStatus() == TestStatus.PASSED)
+                    .count();
             long failed = results.stream()
-                .filter(r -> r.getStatus() == TestStatus.FAILED)
-                .count();
+                    .filter(r -> r.getStatus() == TestStatus.FAILED)
+                    .count();
 
             if (passed == total && failed == 0) {
                 suite.setStatus(TestStatus.PASSED);
@@ -314,5 +320,9 @@ public class TestSuiteService {
         }
 
         suiteRepository.save(suite);
+    }
+
+    public List<TestSuite> getSuitesByUser(Long userId) {
+        return suiteRepository.findByCreatedById(userId);
     }
 }
