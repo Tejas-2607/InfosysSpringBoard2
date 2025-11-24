@@ -53,7 +53,8 @@ public class TestSuiteController {
     private final UserRepository userRepository;
 
     @PostMapping("/import-csv")
-    public ResponseEntity<TestSuite> importSuite(@ModelAttribute TestSuiteRequest request,Authentication authentication) {
+    public ResponseEntity<TestSuite> importSuite(@ModelAttribute TestSuiteRequest request,
+            Authentication authentication) {
         try {
             TestSuite suite = suiteService.importFromCsv(request.getCsvFile(),
                     request.getSuiteName(),
@@ -68,7 +69,7 @@ public class TestSuiteController {
 
     // @GetMapping
     // public ResponseEntity<List<TestSuite>> getSuites() {
-    //     return ResponseEntity.ok(suiteService.getAllSuites());
+    // return ResponseEntity.ok(suiteService.getAllSuites());
     // }
 
     @GetMapping("/{id}")
@@ -293,13 +294,30 @@ public class TestSuiteController {
     }
 
     @GetMapping("/my-suites")
-    public ResponseEntity<List<TestSuite>> getMySuites(Authentication authentication) {
+    public ResponseEntity<List<Map<String, Object>>> getMySuites(Authentication authentication) {
         String username = authentication.getName();
         User currentUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<TestSuite> userSuites = suiteService.getSuitesByUser(currentUser.getId());
-        return ResponseEntity.ok(userSuites);
+
+        // FIXED: Format response with test case count
+        List<Map<String, Object>> enrichedSuites = userSuites.stream()
+                .map(suite -> {
+                    Map<String, Object> suiteData = new HashMap<>();
+                    suiteData.put("id", suite.getId());
+                    suiteData.put("name", suite.getName());
+                    suiteData.put("description", suite.getDescription());
+                    suiteData.put("status", suite.getStatus());
+                    int testCaseCount = suite.getTestCases() != null ? suite.getTestCases().size() : 0;
+                    suiteData.put("testCases", suite.getTestCases());
+                    // suiteData.put("testCaseCount", testCaseCount);
+                    suiteData.put("createdAt", suite.getCreatedAt());
+                    return suiteData;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(enrichedSuites);
     }
 
     @GetMapping
@@ -317,6 +335,9 @@ public class TestSuiteController {
                     suiteData.put("status", suite.getStatus());
                     suiteData.put("testCases", suite.getTestCases());
                     suiteData.put("createdAt", suite.getCreatedAt());
+
+                    int testCaseCount = suite.getTestCases() != null ? suite.getTestCases().size() : 0;
+                    suiteData.put("testCaseCount", testCaseCount); // Add count for convenience
 
                     // FIXED #4: Add creator info
                     if (suite.getCreatedBy() != null) {

@@ -40,7 +40,8 @@
 //     private List<TestResult> testResults = new ArrayList<>();
 // }
 package com.example.test_framework_api.model;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -50,6 +51,7 @@ import java.util.List;
 @Entity
 @Table(name = "test_run")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class TestRun {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,10 +71,12 @@ public class TestRun {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "testRun", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference(value = "testrun-results")
     private List<TestResult> testResults = new ArrayList<>();
 
     // NEW: Track which user created/executed this test run
     @ManyToOne
     @JoinColumn(name = "created_by_user_id")
+    @JsonIgnoreProperties({"password", "roles", "enabled", "createdAt"})
     private User createdBy;
 }

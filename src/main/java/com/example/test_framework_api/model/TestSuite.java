@@ -22,11 +22,12 @@ public class TestSuite {
     private String description;
 
     @OneToMany(mappedBy = "testSuite", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference // FIXED: Serializes testCases without back-ref cycle
+    @JsonManagedReference(value = "testsuite-testcases") // FIXED: Serializes testCases without back-ref cycle
     private List<TestCase> testCases;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_run_id")
+    @JsonIgnoreProperties({"testResults", "createdBy"})
     private TestRun testRun; // NEW FEATURE: Links suite to a TestRun for execution context
 
     @Column(name = "created_at")
@@ -39,8 +40,9 @@ public class TestSuite {
     @Column(name = "report_path")
     private String reportPath;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id")
+    @JsonIgnoreProperties({"password", "roles", "enabled", "createdAt"})
     private User createdBy;
 
     public void updateStatusFromResults() {

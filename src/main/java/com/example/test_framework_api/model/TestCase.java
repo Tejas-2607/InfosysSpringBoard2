@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Entity
 @Table(name = "test_case")
 @Data
-@JsonIgnoreProperties(value = { "testSuite" }, allowSetters = true) // FIXED: Ignore cycle in JSON
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // FIXED: Ignore cycle in JSON
 public class TestCase {
     @Id
     private String testCaseId; // CSV: TestCaseID (e.g., TC_UI01)
@@ -47,9 +47,9 @@ public class TestCase {
 
     private String description;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_suite_id")
-    @JsonBackReference // FIXED: Ignores back-ref to suite (breaks cycle)
+    @JsonBackReference(value = "testsuite-testcases") // FIXED: Ignores back-ref to suite (breaks cycle)
     private TestSuite testSuite; // NEW FEATURE: Belongs to suite
 
     public JsonNode getActions() {

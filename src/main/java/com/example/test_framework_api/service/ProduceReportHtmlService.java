@@ -212,7 +212,7 @@ public class ProduceReportHtmlService {
         String reportPath = "reports/suite-" + suiteId;
         new File(reportPath).mkdirs();
 
-        String htmlContent = generateSimpleHtml(suite, results);
+        String htmlContent = generateSimpleHtml1(suite, results);
         Path htmlFilePath = Paths.get(reportPath, "suite-report.html");
 
         try {
@@ -333,6 +333,129 @@ public class ProduceReportHtmlService {
 
     html.append("<table>");
     html.append("<tr><th>Case ID</th><th>Test Name</th><th>Type</th><th>Status</th><th>Duration (s)</th></tr>");
+
+        for (TestCase tc : suite.getTestCases()) {
+            TestResult result = results.stream()
+                    .filter(r -> r.getTestName().equals(tc.getTestName()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (result != null) {
+                String status = result.getStatus().toString();
+                String statusClass = status.equals("PASSED") ? "passed" : "failed";
+                double duration = (double) (result.getDuration() != null ? result.getDuration() : 0) / 1000;
+
+                html.append("<tr class='").append(statusClass).append("'>");
+                html.append("<td>").append(tc.getTestCaseId()).append("</td>");
+                html.append("<td>").append(tc.getTestName()).append("</td>");
+                html.append("<td>").append(tc.getTestType()).append("</td>");
+                html.append("<td><strong>").append(status).append("</strong></td>");
+                html.append("<td>").append(duration).append("</td>");
+                html.append("</tr>");
+            }
+        }
+
+        html.append("</table>");
+        html.append("<p style='margin-top: 30px; color: #666; text-align: center;'>Generated: ")
+                .append(formattedDate)
+                .append("</p>");
+        html.append("</div>");
+        html.append("</body></html>");
+        return html.toString();
+    }
+    private String generateSimpleHtml1(TestSuite suite, List<TestResult> results) {
+        long total = suite.getTestCases().size();
+        long passed = results.stream()
+                .filter(r -> r.getStatus() == TestStatus.PASSED)
+                .count();
+        long failed = results.stream()
+                .filter(r -> r.getStatus() == TestStatus.FAILED)
+                .count();
+        double passRate = total > 0 ? (passed * 100.0 / total) : 0;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+        String formattedDate = LocalDateTime.now().format(formatter);
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html><head>");
+    html.append("<!DOCTYPE html><html><head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<title>Test Run Report: ").append(suite.getName()).append("</title>");
+        html.append("<style>");
+        html.append(
+                "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }");
+        html.append(
+                ".container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }");
+        html.append("h1 { color: #2d3748; margin: 0 0 10px 0; font-size: 2.5em; }");
+        html.append(".subtitle { color: #718096; font-size: 1.1em; margin-bottom: 30px; }");
+        html.append(
+                ".summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }");
+        html.append(
+                ".stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }");
+        html.append(".stat-card.passed { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }");
+        html.append(".stat-card.failed { background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); }");
+        html.append(".stat-card h3 { margin: 0 0 10px 0; font-size: 1em; text-transform: uppercase; opacity: 0.9; }");
+        html.append(".stat-card .value { font-size: 3em; font-weight: bold; margin: 10px 0; }");
+        html.append(
+                ".progress-bar { background: #e2e8f0; border-radius: 10px; height: 30px; margin: 20px 0; overflow: hidden; position: relative; }");
+        html.append(
+                ".progress-fill { height: 100%; background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s ease; }");
+        html.append(
+                "table { border-collapse: collapse; width: 100%; margin-top: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }");
+        html.append(
+                "th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; text-align: left; font-weight: 600; text-transform: uppercase; font-size: 0.85em; }");
+        html.append("td { padding: 15px; border-bottom: 1px solid #e2e8f0; }");
+        html.append("tr:hover { background-color: #f7fafc; }");
+        html.append(
+                ".status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }");
+        html.append(".status-badge.passed { background: #c6f6d5; color: #22543d; }");
+        html.append(".status-badge.failed { background: #fed7d7; color: #742a2a; }");
+        html.append(
+                ".footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #e2e8f0; text-align: center; color: #718096; }");
+        html.append("</style></head><body>");
+
+        html.append("<div class='container'>");
+        html.append("<h1>🧪 Test Run Report</h1>");
+        html.append("<div class='subtitle'>").append(suite.getName()).append("</div>");
+
+        // Summary Cards
+        html.append("<div class='summary'>");
+        html.append("<div class='stat-card'>");
+        html.append("<h3>Total Tests</h3>");
+        html.append("<div class='value'>").append(total).append("</div>");
+        html.append("</div>");
+
+        html.append("<div class='stat-card passed'>");
+        html.append("<h3>Passed</h3>");
+        html.append("<div class='value'>").append(passed).append("</div>");
+        html.append("</div>");
+
+        html.append("<div class='stat-card failed'>");
+        html.append("<h3>Failed</h3>");
+        html.append("<div class='value'>").append(failed).append("</div>");
+        html.append("</div>");
+
+        html.append("<div class='stat-card'>");
+        html.append("<h3>Pass Rate</h3>");
+        html.append("<div class='value'>").append(String.format("%.1f%%", passRate)).append("</div>");
+        html.append("</div>");
+        html.append("</div>");
+
+        // Progress Bar
+        html.append("<div class='progress-bar'>");
+        html.append("<div class='progress-fill' style='width: ").append(passRate).append("%;'>");
+        html.append(String.format("%.1f%% Pass Rate", passRate));
+        html.append("</div>");
+        html.append("</div>");
+
+        // Results Table
+        html.append("<table>");
+        html.append("<thead><tr>");
+        html.append("<th>Test Case</th>");
+        html.append("<th>Test Name</th>");
+        html.append("<th>Type</th>");
+        html.append("<th>Result</th>");
+        html.append("<th>Duration</th>");
+        html.append("</tr></thead>");
+        html.append("<tbody>");
 
         for (TestCase tc : suite.getTestCases()) {
             TestResult result = results.stream()

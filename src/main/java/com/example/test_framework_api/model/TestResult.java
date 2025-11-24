@@ -78,7 +78,8 @@
 // }
 
 package com.example.test_framework_api.model;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -86,6 +87,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "test_result")
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class TestResult {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -108,12 +110,14 @@ public class TestResult {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_run_id")
+    @JsonBackReference(value = "testrun-results")
     private TestRun testRun;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_suite_id")
+    @JsonBackReference(value = "testsuite-results")
     private TestSuite testSuite;
 
     @Column(name = "flaky_score")
@@ -122,6 +126,7 @@ public class TestResult {
     // NEW: Track which user executed this test
     @ManyToOne
     @JoinColumn(name = "executed_by_user_id")
+    @JsonIgnoreProperties({"password", "roles", "enabled", "createdAt"})
     private User executedBy;
 
     public void calculateFlakyScore() {
