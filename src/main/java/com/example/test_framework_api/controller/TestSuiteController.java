@@ -311,7 +311,7 @@ public class TestSuiteController {
                     suiteData.put("status", suite.getStatus());
                     int testCaseCount = suite.getTestCases() != null ? suite.getTestCases().size() : 0;
                     suiteData.put("testCases", suite.getTestCases());
-                    // suiteData.put("testCaseCount", testCaseCount);
+                    suiteData.put("testCaseCount", testCaseCount);
                     suiteData.put("createdAt", suite.getCreatedAt());
                     return suiteData;
                 })
