@@ -114,6 +114,9 @@ A comprehensive automated regression test suite framework built with Spring Boot
 ## License
 
 This project is not open-source licensed (no MIT/Apache/etc.) because it is an academic/portfolio submission.
+
 You may study, reference, and learn from the code, but please do not claim it as your own work.
+
 Authored & Developed by:
+
 Tejas
